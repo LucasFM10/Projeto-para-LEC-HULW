@@ -88,7 +88,11 @@ class ListaEsperaCirurgica(models.Model):
 
     class Meta:
         verbose_name = "Lista de Espera Cirúrgica"
-        verbose_name_plural = "Listas de Espera Cirúrgica"
+        verbose_name_plural = "Lista de Espera Cirúrgica"
+
+
+    def __str__(self):
+        return f"{self.paciente} sperando para {self.procedimentos}"
 
     
     pontos = models.IntegerField(default=0, editable=False)
@@ -96,7 +100,16 @@ class ListaEsperaCirurgica(models.Model):
     def save(self, *args, **kwargs):
             
             data_entrada = self.data_entrada.replace(tzinfo=None)
-            segundos_totais = data_entrada.timestamp() / 1000
+            data_entrada = data_entrada
+
+            datetime_str = '11/30/24 00:00:00'
+            datetime_object = datetime.datetime.strptime(datetime_str, '%m/%d/%y %H:%M:%S')
+
+            data_entrada = data_entrada - datetime_object
+            
+            print(f'{data_entrada} - {data_entrada.total_seconds()}')
+
+            segundos_totais = data_entrada.total_seconds()
             
             pontos = segundos_totais
             if self.prioridade == 'P0':  # Oncologia

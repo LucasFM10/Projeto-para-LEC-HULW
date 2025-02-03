@@ -32,7 +32,7 @@ class ProcedimentoAdmin(ModelAdmin):
 class ListaEsperaCirurgicaAdmin(ModelAdmin):
     list_display = ('procedimentos__nome','paciente__nome', 'pontos')
 
-    readonly_fields = ['pontos']
+    readonly_fields = ['pontos', 'data_entrada']
     
     autocomplete_fields = ['procedimentos']
 
