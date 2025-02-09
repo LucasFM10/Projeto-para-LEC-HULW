@@ -11,8 +11,8 @@ class Paciente(models.Model):
     nome = models.CharField(max_length=255)  # Nome completo do paciente
     data_nascimento = models.DateField(verbose_name="Data de nascimento")  # Data de nascimento do paciente
     sexo = models.CharField(max_length=1, choices=SEXO_CHOICES)  # Sexo do paciente
-    telefone_contato = models.CharField(verbose_name="Telefone para contato principal", max_length=15, blank=True, null=True)  # Telefone principal
-    telefone_contato2 = models.CharField(verbose_name="Telefone para contato secundário", max_length=15, blank=True, null=True)  # Telefone secundário
+    telefone_contato_principal = models.CharField(verbose_name="Telefone para contato principal", max_length=15, blank=True, null=True)  # Telefone principal
+    telefone_contato_secundario = models.CharField(verbose_name="Telefone para contato secundário", max_length=15, blank=True, null=True)  # Telefone secundário
     nome_responsavel = models.CharField(verbose_name="Nome do responsável", max_length=255, blank=True, null=True)  # Nome do responsável
     numero_prontuario = models.CharField(verbose_name= "Número do prontuário", max_length=20)
 

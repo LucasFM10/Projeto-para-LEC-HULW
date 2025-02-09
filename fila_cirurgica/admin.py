@@ -6,8 +6,9 @@ from django.contrib.auth.models import User, Group
 
 from django.contrib import admin
 from .models import Paciente, Procedimento, ListaEsperaCirurgica
+from .forms import PacienteForm
 
-from unfold.admin import ModelAdmin, TabularInline
+from unfold.admin import ModelAdmin
 
 admin.site.unregister(User)
 admin.site.unregister(Group)
@@ -23,6 +24,14 @@ class GroupAdmin(BaseGroupAdmin, ModelAdmin):
 @admin.register(Paciente)
 class PacienteAdmin(ModelAdmin):
     list_display = ('nome', 'data_nascimento', 'sexo')  # Campos exibidos na lista de pacientes
+
+    form = PacienteForm
+
+    class Media:
+        js = (
+            "jquery.mask.min.js",
+            "custom.js"
+        )
 
 @admin.register(Procedimento)
 class ProcedimentoAdmin(ModelAdmin):
