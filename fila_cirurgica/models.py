@@ -130,6 +130,8 @@ class ListaEsperaCirurgica(models.Model):
     observacoes = models.CharField(max_length=255, verbose_name="observações", blank=True, null=True)
 
     data_novo_contato = models.DateField(verbose_name="Data para novo contato")
+    
+    especialidade = models.CharField(max_length=255, verbose_name="especialidade", blank=True, null=True)
 
     class Meta:
         verbose_name = "Lista de Espera Cirúrgica"
@@ -137,7 +139,7 @@ class ListaEsperaCirurgica(models.Model):
 
 
     def __str__(self):
-        return f"{self.paciente} sperando para {self.procedimentos}"
+        return f"{self.paciente} esperando para {self.procedimentos}"
 
     
     pontos = models.IntegerField(default=0, editable=False)
