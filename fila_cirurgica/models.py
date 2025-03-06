@@ -96,6 +96,14 @@ class ProcedimentoSigtap(models.Model):
         verbose_name = "Procedimento"
         verbose_name_plural = "Procedimentos"
         ordering = ["codigo"]
+            
+
+class Especialidade(models.Model):
+    cod_especialidade = models.CharField(max_length=10, unique=True)
+    nome_especialidade = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.nome_especialidade
 
 class ListaEsperaCirurgica(models.Model):
 
@@ -131,7 +139,7 @@ class ListaEsperaCirurgica(models.Model):
 
     data_novo_contato = models.DateField(verbose_name="Data para novo contato")
     
-    especialidade = models.CharField(max_length=255, verbose_name="especialidade", blank=True, null=True)
+    especialidade = models.ForeignKey(Especialidade, on_delete=models.CASCADE, blank=True, null=True)
 
     class Meta:
         verbose_name = "Lista de Espera Cirúrgica"
@@ -166,14 +174,6 @@ class ListaEsperaCirurgica(models.Model):
 
             self.pontos = pontos
             super().save(*args, **kwargs)
-            
-
-class Especialidade(models.Model):
-    cod_especialidade = models.CharField(max_length=10, unique=True)
-    nome_especialidade = models.CharField(max_length=255)
-
-    def __str__(self):
-        return self.nome_especialidade
     
 
 class Medico(models.Model):

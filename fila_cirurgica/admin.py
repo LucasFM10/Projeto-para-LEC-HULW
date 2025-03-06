@@ -47,7 +47,7 @@ class ListaEsperaCirurgicaAdmin(ModelAdmin):
 
     readonly_fields = ['pontos', 'data_entrada']
     
-    autocomplete_fields = ['procedimentos']
+    autocomplete_fields = ['paciente', 'procedimentos']
 
     ordering = ('-pontos', )
 
