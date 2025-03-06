@@ -202,7 +202,6 @@ def extrair_pontos(texto):
 
 def processar_csv_pacientes(request):
     if request.method == "POST":
-        print(request.FILES)
         arquivo = request.FILES.get("file_pacientes")
 
         if not arquivo.name.endswith(".csv"):
@@ -216,9 +215,7 @@ def processar_csv_pacientes(request):
             leitor = csv.DictReader(csvfile, delimiter=";")  # Usa tabulação como delimitador
 
             for linha in leitor:
-                # print(linha)
                 nome_paciente = linha.get("NOME_PACIENTE", "").strip()
-                print(nome_paciente)
                 
                 if nome_paciente:
                     Paciente.objects.get_or_create(nome=nome_paciente)
@@ -229,14 +226,12 @@ def processar_csv_pacientes(request):
     return render(request, 'upload.html')
 
 def processar_csv_procedimentos(request):
-    print(request.method)
     if request.method == "POST":
         arquivo = request.FILES.get("file_procedimentos")
 
         if not arquivo.name.endswith(".csv"):
             messages.error(request, "Por favor, envie um arquivo CSV válido.")
             return redirect("importar_procedimentos")
-        print("----------------2")
         # Salvar o arquivo temporariamente
         file_path = default_storage.save(f"temp/{arquivo.name}", arquivo)
 
@@ -246,7 +241,6 @@ def processar_csv_procedimentos(request):
             for linha in leitor:
                 codigo = linha.get("COD_PROCEDIMENTO", "").strip()
                 nome = linha.get("PROCEDIMENTO", "").strip()
-                print(linha)
 
                 if codigo and nome:
                     print(f"Importando procedimento: {codigo} - {nome}")

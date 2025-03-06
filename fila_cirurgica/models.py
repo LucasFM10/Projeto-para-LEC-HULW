@@ -164,4 +164,20 @@ class ListaEsperaCirurgica(models.Model):
 
             self.pontos = pontos
             super().save(*args, **kwargs)
+            
+
+class Especialidade(models.Model):
+    cod_especialidade = models.CharField(max_length=10, unique=True)
+    nome_especialidade = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.nome_especialidade
+    
+
+class Medico(models.Model):
+    matricula = models.CharField(max_length=10, unique=True)
+    nome = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.nome
         
