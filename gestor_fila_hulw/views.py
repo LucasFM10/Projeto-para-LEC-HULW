@@ -1,20 +1,22 @@
-import pdfplumber
-from django.shortcuts import render
-from fila_cirurgica.models import Procedimento
+from django.shortcuts import render, redirect
+from fila_cirurgica.models import ProcedimentoSigtap, Paciente, ProcedimentoAghu
 import re
 from bs4 import BeautifulSoup
+from django.core.files.storage import default_storage
+from django.contrib import messages
+import csv
 
 def home(request):
     if request.method == 'POST' and request.FILES.get('file'):
         # Obter o arquivo HTML enviado
         html_file = request.FILES['file']
 
-        procedimentos_criados = processar_html_para_procedimentos(html_file)
+        processar_html_para_procedimentos_sigtap(html_file)
         return render(request, 'upload.html')
 
     return render(request, 'upload.html')
 
-def processar_html_para_procedimentos(html_file):
+def processar_html_para_procedimentos_sigtap(html_file):
 
     # Inicializando as variáveis com valores padrão
     codigo = ''
@@ -143,7 +145,7 @@ def processar_html_para_procedimentos(html_file):
             last = row_text
 
         # Criar o Procedimento no banco de dados
-        procedimento = Procedimento.objects.create(
+        procedimento = ProcedimentoSigtap.objects.create(
             codigo=codigo,
             nome=nome,
             origem=origem,
@@ -197,3 +199,58 @@ def extrair_media_permanencia(texto):
 def extrair_pontos(texto):
     match = re.search(r"Pontos:(\d+)", texto)
     return int(match.group(1)) if match else 0
+
+def processar_csv_pacientes(request):
+    if request.method == "POST":
+        print(request.FILES)
+        arquivo = request.FILES.get("file_pacientes")
+
+        if not arquivo.name.endswith(".csv"):
+            messages.error(request, "Por favor, envie um arquivo CSV válido.")
+            return redirect("importar_pacientes")
+
+        # Salvar o arquivo temporariamente
+        file_path = default_storage.save(f"temp/{arquivo.name}", arquivo)
+
+        with open(default_storage.path(file_path), newline='', encoding="utf-8-sig") as csvfile:
+            leitor = csv.DictReader(csvfile, delimiter=";")  # Usa tabulação como delimitador
+
+            for linha in leitor:
+                # print(linha)
+                nome_paciente = linha.get("NOME_PACIENTE", "").strip()
+                print(nome_paciente)
+                
+                if nome_paciente:
+                    Paciente.objects.get_or_create(nome=nome_paciente)
+
+        messages.success(request, "Pacientes importados com sucesso!")
+        return redirect("importar_pacientes")
+
+    return render(request, 'upload.html')
+
+def processar_csv_procedimentos(request):
+    print(request.method)
+    if request.method == "POST":
+        arquivo = request.FILES.get("file_procedimentos")
+
+        if not arquivo.name.endswith(".csv"):
+            messages.error(request, "Por favor, envie um arquivo CSV válido.")
+            return redirect("importar_procedimentos")
+        print("----------------2")
+        # Salvar o arquivo temporariamente
+        file_path = default_storage.save(f"temp/{arquivo.name}", arquivo)
+
+        with open(default_storage.path(file_path), newline='', encoding="utf-8-sig") as csvfile:
+            leitor = csv.DictReader(csvfile, delimiter=";")  # Usa tabulação como delimitador
+
+            for linha in leitor:
+                codigo = linha.get("COD_PROCEDIMENTO", "").strip()
+                nome = linha.get("PROCEDIMENTO", "").strip()
+                print(linha)
+
+                if codigo and nome:
+                    print(f"Importando procedimento: {codigo} - {nome}")
+                    ProcedimentoAghu.objects.get_or_create(codigo=codigo, nome=nome)
+
+        messages.success(request, "Procedimentos importados com sucesso!")
+        return redirect("importar_procedimentos")

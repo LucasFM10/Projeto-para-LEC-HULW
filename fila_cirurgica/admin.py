@@ -5,7 +5,7 @@ from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.models import User, Group
 
 from django.contrib import admin
-from .models import Paciente, Procedimento, ListaEsperaCirurgica
+from .models import Paciente, Procedimento, ListaEsperaCirurgica, ProcedimentoAghu
 from .forms import PacienteForm
 
 from unfold.admin import ModelAdmin
@@ -34,6 +34,10 @@ class PacienteAdmin(ModelAdmin):
         )
 
 @admin.register(Procedimento)
+class ProcedimentoAdmin(ModelAdmin):
+    search_fields = ['codigo', 'nome']
+
+@admin.register(ProcedimentoAghu)
 class ProcedimentoAdmin(ModelAdmin):
     search_fields = ['codigo', 'nome']
 

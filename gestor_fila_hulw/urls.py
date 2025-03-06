@@ -21,4 +21,7 @@ from . import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.home, name='upload'),
+    path("importar/pacientes/", views.processar_csv_pacientes, name="importar_pacientes"),
+    path("importar/procedimentos/", views.home, name="importar_procedimentos"),
+    path("importar/procedimentos-aghu/", views.processar_csv_procedimentos, name="importar_procedimentos-aghu"),
 ]
