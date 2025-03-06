@@ -1,5 +1,6 @@
 from django.db import models
 import datetime
+from django.db import models
 
 class Paciente(models.Model):
 
@@ -22,8 +23,6 @@ class Paciente(models.Model):
     class Meta:
         verbose_name = "paciente"
         verbose_name_plural = "pacientes"
-        
-from django.db import models
 
 class ProcedimentoAghu(models.Model):
     codigo = models.CharField(max_length=20, unique=True, verbose_name="Código do Procedimento")
