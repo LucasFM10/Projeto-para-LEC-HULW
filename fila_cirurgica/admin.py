@@ -1,8 +1,8 @@
-from django.utils.html import format_html
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.models import User, Group
+from unfold.contrib.filters.admin import TextFilter, FieldTextFilter, RelatedDropdownFilter
 
 from django.contrib import admin
 from .models import Paciente, Procedimento, ListaEsperaCirurgica, ProcedimentoAghu, Especialidade, Medico
@@ -52,6 +52,12 @@ class ListaEsperaCirurgicaAdmin(ModelAdmin):
     autocomplete_fields = ['paciente', 'procedimentos']
 
     ordering = ('-pontos', )
+    
+    list_filter_submit = True  # Submit button at the bottom of the filter
+    list_filter = [
+        ("especialidade", RelatedDropdownFilter),
+        ("paciente", RelatedDropdownFilter),
+    ]
 
 @admin.register(Especialidade)
 class EspecialidadeAdmin(ModelAdmin):

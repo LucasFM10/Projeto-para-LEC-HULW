@@ -33,6 +33,7 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'unfold',
     'unfold.contrib.forms',
+    'unfold.contrib.filters',
 
     'fila_cirurgica',
 
