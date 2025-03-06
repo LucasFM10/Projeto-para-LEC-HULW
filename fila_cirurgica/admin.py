@@ -26,6 +26,8 @@ class PacienteAdmin(ModelAdmin):
     list_display = ('nome', 'data_nascimento', 'sexo')  # Campos exibidos na lista de pacientes
 
     form = PacienteForm
+    
+    search_fields = ['nome']
 
     class Media:
         js = (
