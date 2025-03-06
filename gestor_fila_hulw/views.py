@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from fila_cirurgica.models import ProcedimentoSigtap, Paciente, ProcedimentoAghu
+from fila_cirurgica.models import ProcedimentoSigtap, Paciente, ProcedimentoAghu, Especialidade
 import re
 from bs4 import BeautifulSoup
 from django.core.files.storage import default_storage
@@ -248,3 +248,29 @@ def processar_csv_procedimentos(request):
 
         messages.success(request, "Procedimentos importados com sucesso!")
         return redirect("importar_procedimentos")
+
+def processar_csv_especialidades(request):
+    if request.method == "POST":
+        arquivo = request.FILES.get("file_especialidades")
+
+        if not arquivo.name.endswith(".csv"):
+            messages.error(request, "Por favor, envie um arquivo CSV válido.")
+            return redirect("importar_especialidades")
+
+        # Salvar o arquivo temporariamente
+        file_path = default_storage.save(f"temp/{arquivo.name}", arquivo)
+
+        with open(default_storage.path(file_path), newline='', encoding="utf-8-sig") as csvfile:
+            leitor = csv.DictReader(csvfile, delimiter=";")  # Usa ponto e vírgula como delimitador
+
+            for linha in leitor:
+                codigo = linha.get("COD_ESPECIALIDADE", "").strip()
+                nome = linha.get("NOME_ESPECIALIDADE", "").strip()
+
+                if codigo and nome:
+                    Especialidade.objects.get_or_create(cod_especialidade=codigo, nome_especialidade=nome)
+
+        messages.success(request, "Especialidades importadas com sucesso!")
+        return redirect("importar_especialidades")
+
+    return render(request, 'upload.html')

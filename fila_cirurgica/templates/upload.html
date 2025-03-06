@@ -80,6 +80,16 @@
             <button type="submit">Importar Procedimentos</button>
         </form>
     </div>
-
+    
+    <div class="container">
+        <h1>Cadastro de Especialidades</h1>
+        <form method="POST" action="{% url 'importar_especialidades' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label for="file_especialidades">Envie um arquivo CSV com as especialidades:</label>
+            <input type="file" name="file_especialidades" accept=".csv" required>
+            <button type="submit">Importar Especialidades</button>
+        </form>
+    </div>
+    
 </body>
 </html>

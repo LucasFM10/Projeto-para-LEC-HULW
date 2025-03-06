@@ -5,7 +5,7 @@ from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.models import User, Group
 
 from django.contrib import admin
-from .models import Paciente, Procedimento, ListaEsperaCirurgica, ProcedimentoAghu
+from .models import Paciente, Procedimento, ListaEsperaCirurgica, ProcedimentoAghu, Especialidade, Medico
 from .forms import PacienteForm
 
 from unfold.admin import ModelAdmin
@@ -50,3 +50,11 @@ class ListaEsperaCirurgicaAdmin(ModelAdmin):
     autocomplete_fields = ['procedimentos']
 
     ordering = ('-pontos', )
+
+@admin.register(Especialidade)
+class EspecialidadeAdmin(ModelAdmin):
+    list_display = ('cod_especialidade','nome_especialidade')
+
+@admin.register(Medico)
+class MedicoAdmin(ModelAdmin):
+    list_display = ('nome','matricula')

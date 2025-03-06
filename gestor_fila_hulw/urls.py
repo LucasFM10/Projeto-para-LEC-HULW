@@ -24,4 +24,5 @@ urlpatterns = [
     path("importar/pacientes/", views.processar_csv_pacientes, name="importar_pacientes"),
     path("importar/procedimentos/", views.home, name="importar_procedimentos"),
     path("importar/procedimentos-aghu/", views.processar_csv_procedimentos, name="importar_procedimentos-aghu"),
+    path("importar/especialidades/", views.processar_csv_especialidades, name="importar_especialidades"),
 ]
