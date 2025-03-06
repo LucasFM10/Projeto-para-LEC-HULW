@@ -116,11 +116,14 @@ class ListaEsperaCirurgica(models.Model):
 
     SITUACAO_CHOICES = [
         ('CA', 'CONSULTA AGENDADA'),
-        ('AE', 'AGUARDANDO EXAMES'),
+        ('AE', 'EXAMES PENDENTES'),
         ('DP', 'DOCUMENTAÇÃO PENDENTE'),
-        ('EA', 'EXAMES EM ATRASO'),
         ('PP', 'PACIENTE PRONTO PARA CIRURGIA'),
-        ('CA', 'CIRURGIA AGENDADA'),
+        ('CNR', 'CONTATO NÃO REALIZADO'),
+        ('T1F', 'TENTATIVA 1 FALHOU'),
+        ('T2F', 'TENTATIVA 2 FALHOU'),
+        ('T3F', 'TENTATIVA 3 FALHOU, NÃO SERÃO REALIZADOS NOVOS CONTATOS'),
+        ('CRS', 'CONTATO REALIZADO COM SUCESSO'),
     ]
 
     situacao = models.CharField(choices=SITUACAO_CHOICES)
