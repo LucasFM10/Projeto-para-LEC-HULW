@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.models import User, Group
-from unfold.contrib.filters.admin import TextFilter, FieldTextFilter, RelatedDropdownFilter
+from unfold.contrib.filters.admin import AutocompleteSelectMultipleFilter
 
 from django.contrib import admin
 from .models import Paciente, Procedimento, ListaEsperaCirurgica, ProcedimentoAghu, Especialidade, Medico
@@ -49,19 +49,21 @@ class ListaEsperaCirurgicaAdmin(ModelAdmin):
 
     readonly_fields = ['pontos', 'data_entrada']
     
-    autocomplete_fields = ['paciente', 'procedimentos']
+    autocomplete_fields = ['paciente', 'procedimentos', 'especialidade']
 
     ordering = ('-pontos', )
     
     list_filter_submit = True  # Submit button at the bottom of the filter
+    
     list_filter = [
-        ("especialidade", RelatedDropdownFilter),
-        ("paciente", RelatedDropdownFilter),
+        ("especialidade", AutocompleteSelectMultipleFilter),
     ]
 
 @admin.register(Especialidade)
 class EspecialidadeAdmin(ModelAdmin):
     list_display = ('cod_especialidade','nome_especialidade')
+    
+    search_fields = ['nome_especialidade', 'cod_especialidade']
 
 @admin.register(Medico)
 class MedicoAdmin(ModelAdmin):

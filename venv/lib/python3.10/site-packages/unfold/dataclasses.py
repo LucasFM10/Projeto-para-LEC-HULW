@@ -1,5 +1,7 @@
 from dataclasses import dataclass
-from typing import Callable, Dict, Optional, Union
+from typing import Callable, Optional, Union
+
+from unfold.enums import ActionVariant
 
 from .typing import ActionFunction
 
@@ -10,8 +12,10 @@ class UnfoldAction:
     method: ActionFunction
     description: str
     path: str
-    attrs: Optional[Dict] = None
+    attrs: Optional[dict] = None
     object_id: Optional[Union[int, str]] = None
+    icon: Optional[str] = None
+    variant: Optional[ActionVariant] = ActionVariant.DEFAULT
 
 
 @dataclass
@@ -20,3 +24,10 @@ class Favicon:
     rel: Optional[str] = None
     type: Optional[str] = None
     sizes: Optional[str] = None
+
+
+@dataclass
+class DropdownItem:
+    title: str
+    link: Union[str, Callable]
+    icon: Optional[str] = None
