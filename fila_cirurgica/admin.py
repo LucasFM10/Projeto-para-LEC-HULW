@@ -5,7 +5,7 @@ from django.contrib.auth.models import User, Group
 from unfold.contrib.filters.admin import AutocompleteSelectMultipleFilter
 
 from django.contrib import admin
-from .models import Paciente, Procedimento, ListaEsperaCirurgica, ProcedimentoAghu, Especialidade, Medico
+from .models import Paciente, ListaEsperaCirurgica, ProcedimentoAghu, Especialidade, Medico
 from .forms import PacienteForm
 
 from unfold.admin import ModelAdmin
@@ -34,10 +34,6 @@ class PacienteAdmin(ModelAdmin):
             "jquery.mask.min.js",
             "custom.js"
         )
-
-@admin.register(Procedimento)
-class ProcedimentoAdmin(ModelAdmin):
-    search_fields = ['codigo', 'nome']
 
 @admin.register(ProcedimentoAghu)
 class ProcedimentoAdmin(ModelAdmin):

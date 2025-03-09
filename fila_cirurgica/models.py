@@ -30,41 +30,11 @@ class ProcedimentoAghu(models.Model):
 
     def __str__(self):
         return f"{self.codigo} - {self.nome}"
-
-
-class Procedimento(models.Model):
     
-    codigo = models.CharField(max_length=50, blank=True, null=True)
-    nome = models.CharField(max_length=255, blank=True, null=True)
-    origem = models.TextField(blank=True, null=True)
-    complexidade = models.CharField(max_length=100, blank=True, null=True)
-    modalidades = models.TextField(blank=True, null=True)
-    instrumento_registro = models.CharField(max_length=255, blank=True, null=True)
-    tipo_financiamento = models.CharField(max_length=255, blank=True, null=True)
-    valor_ambulatorial_sa = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    valor_ambulatorial_total = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    valor_hospitalar_sp = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    valor_hospitalar_sh = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    valor_hospitalar_total = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    atributo_complementar = models.JSONField(default=list, blank=True, null=True)  # Usando JSONField para armazenar lista de atributos
-    sexo = models.CharField(max_length=50, blank=True, null=True)
-    idade_minima = models.IntegerField(blank=True, null=True)
-    idade_maxima = models.IntegerField(blank=True, null=True)
-    quantidade_maxima = models.IntegerField(blank=True, null=True)
-    media_permanencia = models.IntegerField(blank=True, null=True)
-    pontos = models.IntegerField(blank=True, null=True)
-    cbo = models.JSONField(default=list, blank=True, null=True)  # Usando JSONField para armazenar lista de CBOs
-
-
-    def __str__(self):
-        return f"{self.codigo} - {self.nome}"
-
     class Meta:
         verbose_name = "Procedimento"
         verbose_name_plural = "Procedimentos"
-        ordering = ["codigo"]
 
- 
 class ProcedimentoSigtap(models.Model):
     
     codigo = models.CharField(max_length=50, blank=True, null=True)
@@ -93,10 +63,9 @@ class ProcedimentoSigtap(models.Model):
         return f"{self.codigo} - {self.nome}"
 
     class Meta:
-        verbose_name = "Procedimento"
-        verbose_name_plural = "Procedimentos"
+        verbose_name = "Procedimento Sigtap"
+        verbose_name_plural = "Procedimentos Sigtap"
         ordering = ["codigo"]
-            
 
 class Especialidade(models.Model):
     cod_especialidade = models.CharField(max_length=10, unique=True)
@@ -174,8 +143,7 @@ class ListaEsperaCirurgica(models.Model):
 
             self.pontos = pontos
             super().save(*args, **kwargs)
-    
-
+   
 class Medico(models.Model):
     matricula = models.CharField(max_length=10, unique=True)
     nome = models.CharField(max_length=255)
