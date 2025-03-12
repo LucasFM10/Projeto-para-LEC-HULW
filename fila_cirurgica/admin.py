@@ -5,7 +5,7 @@ from django.contrib.auth.models import User, Group
 from unfold.contrib.filters.admin import AutocompleteSelectMultipleFilter
 
 from django.contrib import admin
-from .models import Paciente, ListaEsperaCirurgica, ProcedimentoAghu, Especialidade, Medico
+from .models import Paciente, ListaEsperaCirurgica, ProcedimentoAghu, Especialidade, Medico, EspecialidadeProcedimento
 from .forms import PacienteForm
 
 from unfold.admin import ModelAdmin
@@ -68,3 +68,9 @@ class MedicoAdmin(ModelAdmin):
     list_display = ('nome','matricula')
     
     autocomplete_fields = ['especialidades']
+
+@admin.register(EspecialidadeProcedimento)
+class EspecialidadeProcedimentoAdmin(ModelAdmin):
+    list_display = ('especialidade','procedimento')
+    
+    autocomplete_fields = ['especialidade', 'procedimento']

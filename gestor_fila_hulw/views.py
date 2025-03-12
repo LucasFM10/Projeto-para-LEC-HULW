@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from fila_cirurgica.models import ProcedimentoSigtap, Paciente, ProcedimentoAghu, Especialidade
+from fila_cirurgica.models import ProcedimentoSigtap, Paciente, ProcedimentoAghu, Especialidade, EspecialidadeProcedimento
 import re
 from bs4 import BeautifulSoup
 from django.core.files.storage import default_storage
@@ -272,5 +272,43 @@ def processar_csv_especialidades(request):
 
         messages.success(request, "Especialidades importadas com sucesso!")
         return redirect("importar_especialidades")
+
+    return render(request, 'upload.html')
+
+def processar_csv_especialidades_procedimentos(request):
+    if request.method == "POST":
+        arquivo = request.FILES.get("file_especialidade_procedimento")
+
+        if not arquivo.name.endswith(".csv"):
+            messages.error(request, "Por favor, envie um arquivo CSV válido.")
+            return redirect("importar_especialidades_procedimentos")
+
+        file_path = default_storage.save(f"temp/{arquivo.name}", arquivo)
+
+        with open(default_storage.path(file_path), newline='', encoding="utf-8-sig") as csvfile:
+            leitor = csv.DictReader(csvfile, delimiter=";")
+
+            for linha in leitor:
+                cod_especialidade = linha.get("cod_especialidade", "").strip()
+                nome_especialidade = linha.get("especialidade", "").strip()
+                cod_procedimento = linha.get("cod_procedimento", "").strip()
+                nome_procedimento = linha.get("nome_procedimento", "").strip()
+                situacao_procedimento = linha.get("situacao_procedimento", "").strip()
+
+                if cod_especialidade and nome_especialidade and cod_procedimento and nome_procedimento:
+                    especialidade, _ = Especialidade.objects.get_or_create(
+                        cod_especialidade=cod_especialidade, nome_especialidade=nome_especialidade
+                    )
+                    procedimento, _ = ProcedimentoAghu.objects.get_or_create(
+                        codigo=cod_procedimento, nome=nome_procedimento
+                    )
+
+                    EspecialidadeProcedimento.objects.get_or_create(
+                        especialidade=especialidade,
+                        procedimento=procedimento
+                    )
+
+        messages.success(request, "Especialidades e Procedimentos importados com sucesso!")
+        return redirect("importar_especialidades_procedimentos")
 
     return render(request, 'upload.html')

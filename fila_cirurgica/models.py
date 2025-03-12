@@ -73,7 +73,20 @@ class Especialidade(models.Model):
 
     def __str__(self):
         return self.nome_especialidade
-   
+    
+class EspecialidadeProcedimento(models.Model):
+    especialidade = models.ForeignKey(Especialidade, on_delete=models.CASCADE)
+    procedimento = models.ForeignKey(ProcedimentoAghu, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('especialidade', 'procedimento')  # Garante que não haja duplicatas
+        verbose_name = "Especialidade e Procedimento"
+        verbose_name_plural = "Especialidades e Procedimentos"
+
+    def __str__(self):
+        return f"{self.especialidade.nome_especialidade} - {self.procedimento.nome}"
+
+
 class Medico(models.Model):
     matricula = models.CharField(max_length=10, unique=True)
     nome = models.CharField(max_length=255)

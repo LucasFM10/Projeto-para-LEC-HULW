@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastro de Pacientes e Procedimentos</title>
+    <title>Upload de documentos</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -88,6 +88,16 @@
             <label for="file_especialidades">Envie um arquivo CSV com as especialidades:</label>
             <input type="file" name="file_especialidades" accept=".csv" required>
             <button type="submit">Importar Especialidades</button>
+        </form>
+    </div>
+
+    <div class="container">
+        <h1>Cadastro de Especialidades e Procedimentos</h1>
+        <form method="POST" action="{% url 'importar_especialidades_procedimentos' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label for="file_especialidade_procedimento">Envie um arquivo CSV com especialidades e procedimentos:</label>
+            <input type="file" name="file_especialidade_procedimento" accept=".csv" required>
+            <button type="submit">Importar Especialidade e Procedimento</button>
         </form>
     </div>
     
