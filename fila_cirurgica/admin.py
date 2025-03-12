@@ -6,7 +6,7 @@ from unfold.contrib.filters.admin import AutocompleteSelectMultipleFilter
 
 from django.contrib import admin
 from .models import Paciente, ListaEsperaCirurgica, ProcedimentoAghu, Especialidade, Medico, EspecialidadeProcedimento
-from .forms import PacienteForm
+from .forms import PacienteForm, ListaEsperaCirurgicaForm
 
 from unfold.admin import ModelAdmin
 
@@ -41,21 +41,34 @@ class ProcedimentoAdmin(ModelAdmin):
 
 @admin.register(ListaEsperaCirurgica)
 class ListaEsperaCirurgicaAdmin(ModelAdmin):
-    list_display = ('get_procedimento','paciente__nome', 'get_posicao')
+    list_display = ('get_especialidade', 'get_procedimento', 'get_paciente', 'get_posicao')
 
     readonly_fields = ['data_entrada']
     
-    autocomplete_fields = ['paciente', 'procedimento']
+    form = ListaEsperaCirurgicaForm
     
+    autocomplete_fields = ["procedimento", "paciente"]  # Aplica autocomplete corretamente
+
     list_filter_submit = True
-    
+
     list_filter = [
-        ("especialidade", AutocompleteSelectMultipleFilter),
+        ("procedimento__especialidadeprocedimento__especialidade", AutocompleteSelectMultipleFilter),
     ]
     
+    def get_especialidade(self, obj):
+        """ Retorna a especialidade associada ao procedimento """
+        procedimento = obj.procedimento
+        if procedimento:
+            especialidade_procedimento = procedimento.especialidadeprocedimento_set.first()
+            return especialidade_procedimento.especialidade.nome_especialidade if especialidade_procedimento else "Sem Especialidade"
+
     @admin.display(description="Procedimento Realizado")
     def get_procedimento(self, obj):
         return obj.procedimento
+    
+    @admin.display(description="Nome do Paciente")
+    def get_paciente(self, obj):
+        return obj.paciente
 
 @admin.register(Especialidade)
 class EspecialidadeAdmin(ModelAdmin):
@@ -74,3 +87,5 @@ class EspecialidadeProcedimentoAdmin(ModelAdmin):
     list_display = ('especialidade','procedimento')
     
     autocomplete_fields = ['especialidade', 'procedimento']
+    
+    search_fields = ['especialidade__nome_especialidade', 'procedimento__nome']

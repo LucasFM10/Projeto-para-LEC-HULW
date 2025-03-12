@@ -6,6 +6,20 @@ from django.core.files.storage import default_storage
 from django.contrib import messages
 import csv
 
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+
+@login_required  # Garante que apenas usuários autenticados acessem
+def especialidade_autocomplete(request):
+    term = request.GET.get("q", "").strip()  # Obtém o termo de pesquisa
+    if not term:
+        return JsonResponse([], safe=False)
+
+    especialidades = Especialidade.objects.filter(nome_especialidade__icontains=term)
+    data = [{"id": e.id, "text": e.nome_especialidade} for e in especialidades]
+
+    return JsonResponse(data, safe=False)
+
 def home(request):
     if request.method == 'POST' and request.FILES.get('file'):
         # Obter o arquivo HTML enviado

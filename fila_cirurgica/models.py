@@ -102,7 +102,6 @@ class Medico(models.Model):
 class ListaEsperaCirurgica(models.Model):
 
     paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE)
-    especialidade = models.ForeignKey(Especialidade, on_delete=models.CASCADE, blank=True, null=True)
     procedimento = models.ForeignKey(ProcedimentoAghu, on_delete=models.CASCADE, blank=True, null=True)
     medico = models.ForeignKey(Medico, on_delete=models.CASCADE, blank=True, null=True)
     
@@ -143,7 +142,7 @@ class ListaEsperaCirurgica(models.Model):
 
 
     def __str__(self):
-        return f"{self.paciente} esperando para {self.procedimento}"
+        return f"{self.paciente}"# esperando para {self.especialidadeprocedimento.procedimento}"
     
     def get_posicao(self):
         # Obtém a posição do paciente na fila ordenada

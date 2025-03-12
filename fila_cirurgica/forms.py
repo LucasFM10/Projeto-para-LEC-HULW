@@ -1,35 +1,57 @@
 from django import forms
-from django.core.exceptions import ValidationError
-from django.forms import TextInput
-
-from .models import Paciente
+from django.contrib import admin
+from django.contrib.admin.widgets import AutocompleteSelect
+from .models import Paciente, Especialidade, ListaEsperaCirurgica, EspecialidadeProcedimento
 
 class PacienteForm(forms.ModelForm):
     class Meta:
         model = Paciente
         fields = [
-                'nome',
-                'data_nascimento',
-                'sexo',
-                'telefone_contato_principal',
-                'telefone_contato_secundario',
-                'nome_responsavel',
-                'numero_prontuario'
-            ]
-    
+            'nome', 'data_nascimento', 'sexo', 'telefone_contato_principal',
+            'telefone_contato_secundario', 'nome_responsavel', 'numero_prontuario'
+        ]
+
     def clean_telefone_contato_principal(self):
         telefone = self.cleaned_data.get('telefone_contato_principal')
         if telefone and not telefone.isdigit():
-            raise ValidationError('Preencha o telefone para contato apenas com números.')
+            raise forms.ValidationError('Preencha o telefone para contato apenas com números.')
         return telefone
-    
 
     def __init__(self, *args, **kwargs):
-        super(PacienteForm, self).__init__(*args, **kwargs)
-        widget_telefone_principal = self.fields["telefone_contato_principal"].widget
-        widget_telefone_principal.attrs['placeholder'] = 'Ex.: XX X XXXX - XXXX'
-        widget_telefone_principal.attrs['class'] = widget_telefone_principal.attrs.get('class') + ' mask-telefone'
+        super().__init__(*args, **kwargs)
+        for field in ["telefone_contato_principal", "telefone_contato_secundario"]:
+            widget = self.fields[field].widget
+            widget.attrs.update({
+                'placeholder': 'Ex.: XX X XXXX - XXXX',
+                'class': widget.attrs.get('class', '') + ' mask-telefone'
+            })
 
-        widget_telefone_contato_secundario = self.fields["telefone_contato_secundario"].widget
-        widget_telefone_contato_secundario.attrs['placeholder'] = 'Ex.: XX X XXXX - XXXX'
-        widget_telefone_contato_secundario.attrs['class'] = widget_telefone_contato_secundario.attrs.get('class') + ' mask-telefone'
+from django import forms
+from django.contrib import admin
+from django.contrib.admin.widgets import AutocompleteSelect
+from .models import Especialidade, ListaEsperaCirurgica
+
+class FakeRelation:
+    """Engana o Django para que `AutocompleteSelect` funcione em campos que não são ForeignKey."""
+    def __init__(self, model, field_name):
+        self.model = model
+        self.name = field_name
+        self.remote_field = self  # Adiciona `remote_field` para evitar erro
+
+class CustomAutocompleteSelect(AutocompleteSelect):
+    """Usa `FakeRelation` para permitir `AutocompleteSelect` no formulário personalizado."""
+    def __init__(self, model, field_name, admin_site, attrs=None, choices=(), using=None):
+        rel = FakeRelation(model, field_name)
+        super().__init__(rel, admin_site, attrs=attrs, choices=choices, using=using)
+
+class ListaEsperaCirurgicaForm(forms.ModelForm):
+    especialidade = forms.ModelChoiceField(
+        queryset=Especialidade.objects.all(),
+        required=False,
+        label="Especialidade",
+        widget=CustomAutocompleteSelect(EspecialidadeProcedimento, "especialidade", admin.site),
+    )
+
+    class Meta:
+        model = ListaEsperaCirurgica
+        fields = ['especialidade', 'procedimento', 'paciente', 'medico', 'situacao', 'observacoes', 'data_novo_contato']
