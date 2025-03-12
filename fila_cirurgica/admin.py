@@ -41,19 +41,21 @@ class ProcedimentoAdmin(ModelAdmin):
 
 @admin.register(ListaEsperaCirurgica)
 class ListaEsperaCirurgicaAdmin(ModelAdmin):
-    list_display = ('procedimentos__nome','paciente__nome', 'pontos')
+    list_display = ('get_procedimento','paciente__nome', 'get_posicao')
 
-    readonly_fields = ['pontos', 'data_entrada']
+    readonly_fields = ['data_entrada']
     
-    autocomplete_fields = ['paciente', 'procedimentos', 'especialidade']
-
-    ordering = ('-pontos', )
+    autocomplete_fields = ['paciente', 'procedimento']
     
-    list_filter_submit = True  # Submit button at the bottom of the filter
+    list_filter_submit = True
     
     list_filter = [
         ("especialidade", AutocompleteSelectMultipleFilter),
     ]
+    
+    @admin.display(description="Procedimento Realizado")
+    def get_procedimento(self, obj):
+        return obj.procedimento
 
 @admin.register(Especialidade)
 class EspecialidadeAdmin(ModelAdmin):
@@ -64,3 +66,5 @@ class EspecialidadeAdmin(ModelAdmin):
 @admin.register(Medico)
 class MedicoAdmin(ModelAdmin):
     list_display = ('nome','matricula')
+    
+    autocomplete_fields = ['especialidades']
