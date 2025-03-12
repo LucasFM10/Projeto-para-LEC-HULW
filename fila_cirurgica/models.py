@@ -75,7 +75,7 @@ class Especialidade(models.Model):
         return self.nome_especialidade
     
 class EspecialidadeProcedimento(models.Model):
-    especialidade = models.ForeignKey(Especialidade, on_delete=models.CASCADE)
+    especialidade = models.ForeignKey(Especialidade, on_delete=models.CASCADE, verbose_name="AAA")
     procedimento = models.ForeignKey(ProcedimentoAghu, on_delete=models.CASCADE)
 
     class Meta:
@@ -103,7 +103,7 @@ class ListaEsperaCirurgica(models.Model):
 
     paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE)
     procedimento = models.ForeignKey(ProcedimentoAghu, on_delete=models.CASCADE, blank=True, null=True)
-    medico = models.ForeignKey(Medico, on_delete=models.CASCADE, blank=True, null=True)
+    medico = models.ForeignKey(Medico, on_delete=models.CASCADE, verbose_name="Médico",blank=True, null=True)
     
     data_entrada = models.DateTimeField(auto_now_add=True)
 
@@ -129,7 +129,7 @@ class ListaEsperaCirurgica(models.Model):
         ('CRS', 'CONTATO REALIZADO COM SUCESSO'),
     ]
 
-    situacao = models.CharField(choices=SITUACAO_CHOICES)
+    situacao = models.CharField(choices=SITUACAO_CHOICES, verbose_name="Situação")
 
     observacoes = models.CharField(max_length=255, verbose_name="observações", blank=True, null=True)
 

@@ -26,8 +26,6 @@ class PacienteForm(forms.ModelForm):
                 'class': widget.attrs.get('class', '') + ' mask-telefone'
             })
 
-from django import forms
-from django.contrib import admin
 from django.contrib.admin.widgets import AutocompleteSelect
 from .models import Especialidade, ListaEsperaCirurgica
 
@@ -55,3 +53,7 @@ class ListaEsperaCirurgicaForm(forms.ModelForm):
     class Meta:
         model = ListaEsperaCirurgica
         fields = ['especialidade', 'procedimento', 'paciente', 'medico', 'situacao', 'observacoes', 'data_novo_contato']
+        
+        labels = {
+            "especialidade"
+        }
