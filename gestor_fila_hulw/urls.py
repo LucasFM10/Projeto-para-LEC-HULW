@@ -20,6 +20,7 @@ from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("fila_cirurgica/", include("fila_cirurgica.urls")),  # Inclui as URLs da app
     path('', views.home, name='upload'),
     path("importar/pacientes/", views.processar_csv_pacientes, name="importar_pacientes"),
     path("importar/procedimentos/", views.home, name="importar_procedimentos"),

@@ -26,6 +26,8 @@ class PacienteForm(forms.ModelForm):
                 'class': widget.attrs.get('class', '') + ' mask-telefone'
             })
 
+from django import forms
+from django.contrib import admin
 from django.contrib.admin.widgets import AutocompleteSelect
 from .models import Especialidade, ListaEsperaCirurgica
 
@@ -47,13 +49,16 @@ class ListaEsperaCirurgicaForm(forms.ModelForm):
         queryset=Especialidade.objects.all(),
         required=False,
         label="Especialidade",
-        widget=CustomAutocompleteSelect(EspecialidadeProcedimento, "especialidade", admin.site),
+        widget=CustomAutocompleteSelect(EspecialidadeProcedimento, "especialidade", admin.site, attrs={'disabled': 'disabled'}),
     )
 
     class Meta:
         model = ListaEsperaCirurgica
         fields = ['especialidade', 'procedimento', 'paciente', 'medico', 'situacao', 'observacoes', 'data_novo_contato']
-        
-        labels = {
-            "especialidade"
-        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.procedimento:
+            especialidade_procedimento = EspecialidadeProcedimento.objects.filter(procedimento=self.instance.procedimento).first()
+            if especialidade_procedimento:
+                self.fields['especialidade'].initial = especialidade_procedimento.especialidade

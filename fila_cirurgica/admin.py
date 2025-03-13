@@ -39,6 +39,12 @@ class PacienteAdmin(ModelAdmin):
 class ProcedimentoAdmin(ModelAdmin):
     search_fields = ['codigo', 'nome']
 
+    def get_search_results(self, request, queryset, search_term):
+        # Filtra apenas os procedimentos que possuem uma especialidade associada
+        queryset = queryset.filter(especialidadeprocedimento__isnull=False).distinct()
+
+        return super().get_search_results(request, queryset, search_term)
+
 @admin.register(ListaEsperaCirurgica)
 class ListaEsperaCirurgicaAdmin(ModelAdmin):
     list_display = ('get_especialidade', 'get_procedimento', 'get_paciente', 'get_posicao')
@@ -47,21 +53,24 @@ class ListaEsperaCirurgicaAdmin(ModelAdmin):
     
     form = ListaEsperaCirurgicaForm
     
-    autocomplete_fields = ["procedimento", "paciente"]  # Aplica autocomplete corretamente
+    autocomplete_fields = ["procedimento", "paciente", "medico"]  # Aplica autocomplete corretamente
 
     list_filter_submit = True
 
     list_filter = [
         ("procedimento__especialidadeprocedimento__especialidade", AutocompleteSelectMultipleFilter),
+        ("medico", AutocompleteSelectMultipleFilter),
     ]
     
     def get_especialidade(self, obj):
         """ Retorna a especialidade associada ao procedimento """
-        procedimento = obj.procedimento
-        if procedimento:
-            especialidade_procedimento = procedimento.especialidadeprocedimento_set.first()
+        if obj.procedimento:
+            especialidade_procedimento = EspecialidadeProcedimento.objects.filter(procedimento=obj.procedimento).first()
             return especialidade_procedimento.especialidade.nome_especialidade if especialidade_procedimento else "Sem Especialidade"
-
+        return "Sem Especialidade"
+    
+    get_especialidade.short_description = "Especialidade"
+    
     @admin.display(description="Procedimento Realizado")
     def get_procedimento(self, obj):
         return obj.procedimento
@@ -69,6 +78,14 @@ class ListaEsperaCirurgicaAdmin(ModelAdmin):
     @admin.display(description="Nome do Paciente")
     def get_paciente(self, obj):
         return obj.paciente
+    
+    class Media:
+        js = (
+            "https://code.jquery.com/jquery-3.6.0.min.js",  # Garante o carregamento do jQuery
+            "custom1.js",
+        )
+
+
 
 @admin.register(Especialidade)
 class EspecialidadeAdmin(ModelAdmin):
@@ -81,6 +98,7 @@ class MedicoAdmin(ModelAdmin):
     list_display = ('nome','matricula')
     
     autocomplete_fields = ['especialidades']
+    search_fields = ['nome']
 
 @admin.register(EspecialidadeProcedimento)
 class EspecialidadeProcedimentoAdmin(ModelAdmin):
