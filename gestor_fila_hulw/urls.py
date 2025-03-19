@@ -20,13 +20,18 @@ from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("fila_cirurgica/", include("fila_cirurgica.urls")),  # Inclui as URLs da app
+    # Inclui as URLs da app
+    path("fila_cirurgica/", include("fila_cirurgica.urls")),
     path('', views.home, name='upload'),
-    path("importar/pacientes/", views.processar_csv_pacientes, name="importar_pacientes"),
+    path("importar/pacientes/", views.processar_csv_pacientes,
+         name="importar_pacientes"),
     path("importar/procedimentos/", views.home, name="importar_procedimentos"),
-    path("importar/procedimentos-aghu/", views.processar_csv_procedimentos, name="importar_procedimentos-aghu"),
-    path("importar/especialidades/", views.processar_csv_especialidades, name="importar_especialidades"),
-    path("importar/especialidadesprocedimentos/", views.processar_csv_especialidades_procedimentos, name="importar_especialidades_procedimentos"),
+    path("importar/procedimentos-aghu/", views.processar_csv_procedimentos,
+         name="importar_procedimentos-aghu"),
+    path("importar/especialidades/", views.processar_csv_especialidades,
+         name="importar_especialidades"),
+    path("importar/especialidadesprocedimentos/", views.processar_csv_especialidades_procedimentos,
+         name="importar_especialidades_procedimentos"),
 ]
 
 urlpatterns += [

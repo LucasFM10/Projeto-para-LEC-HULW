@@ -9,16 +9,19 @@ import csv
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 
+
 @login_required  # Garante que apenas usuários autenticados acessem
 def especialidade_autocomplete(request):
     term = request.GET.get("q", "").strip()  # Obtém o termo de pesquisa
     if not term:
         return JsonResponse([], safe=False)
 
-    especialidades = Especialidade.objects.filter(nome_especialidade__icontains=term)
+    especialidades = Especialidade.objects.filter(
+        nome_especialidade__icontains=term)
     data = [{"id": e.id, "text": e.nome_especialidade} for e in especialidades]
 
     return JsonResponse(data, safe=False)
+
 
 def home(request):
     if request.method == 'POST' and request.FILES.get('file'):
@@ -29,6 +32,7 @@ def home(request):
         return render(request, 'upload.html')
 
     return render(request, 'upload.html')
+
 
 def processar_html_para_procedimentos_sigtap(html_file):
 
@@ -56,10 +60,10 @@ def processar_html_para_procedimentos_sigtap(html_file):
 
     # Lê o conteúdo do arquivo HTML
     html_content = html_file.read().decode('utf-8')
-    
+
     # Inicializa o BeautifulSoup para processar o HTML
     soup = BeautifulSoup(html_content, 'html.parser')
-    
+
     tabelas = soup.find_all('table', class_='jrPage')
 
     for tabela in tabelas:
@@ -93,36 +97,44 @@ def processar_html_para_procedimentos_sigtap(html_file):
                 modalidade = match.group(1).strip()
                 print("Modalidade: " + match.group(1).strip())
 
-            match = re.search(r"Instrumento de Registro:(.*?)Instrumento de Registro:", row_text)
+            match = re.search(
+                r"Instrumento de Registro:(.*?)Instrumento de Registro:", row_text)
             if match:
                 instrumento_registro = match.group(1).strip()
                 print("Instrumentro de Registro: " + match.group(1).strip())
 
             if "Tipo de Financiamento:" in row_text:
-                tipo_financiamento = row_text.split("Tipo de Financiamento:")[1].strip()
+                tipo_financiamento = row_text.split(
+                    "Tipo de Financiamento:")[1].strip()
                 print(row_text)
 
             if "Valor Ambulatorial S.A.:" in last:
-                valor_ambulatorial_sa = extrair_valor(row_text, 'Valor Ambulatorial S.A.:')
+                valor_ambulatorial_sa = extrair_valor(
+                    row_text, 'Valor Ambulatorial S.A.:')
                 print("Valor Ambulatorial S.A.:" + row_text)
 
             if "Valor Ambulatorial Total:" in last:
-                valor_ambulatorial_total = extrair_valor(row_text, 'Valor Ambulatorial Total:')
+                valor_ambulatorial_total = extrair_valor(
+                    row_text, 'Valor Ambulatorial Total:')
                 print("Valor  Ambulatorial Total:" + row_text)
 
             if "Valor Hospitalar S.P.:" in last:
-                valor_hospitalar_sp = extrair_valor(row_text, 'Valor Hospitalar S.P.:')
+                valor_hospitalar_sp = extrair_valor(
+                    row_text, 'Valor Hospitalar S.P.:')
                 print("Valor Hospitalar S.P.:" + row_text)
 
             if "Valor Hospitalar S.H.:" in row_text:
-                valor_hospitalar_sh = extrair_valor(row_text, 'Valor Hospitalar S.H.:')
+                valor_hospitalar_sh = extrair_valor(
+                    row_text, 'Valor Hospitalar S.H.:')
                 print(row_text)
 
             if "Valor Hospitalar Total:" in row_text:
-                valor_hospitalar_total = extrair_valor(row_text, 'Valor Hospitalar Total:')
+                valor_hospitalar_total = extrair_valor(
+                    row_text, 'Valor Hospitalar Total:')
                 print(row_text)
 
-            match = re.search(r"Atributo Complementar:(.*?)Atributo Complementar:", row_text)
+            match = re.search(
+                r"Atributo Complementar:(.*?)Atributo Complementar:", row_text)
             if match:
                 atributo_complementar = match.group(1).strip()
                 print("Atributo Complementar:" + match.group(1).strip())
@@ -184,11 +196,12 @@ def processar_html_para_procedimentos_sigtap(html_file):
 
         procedimento.save()
 
-def extrair_texto_de_tr(row):     
+
+def extrair_texto_de_tr(row):
     cells = row.find_all('td')
     text = ''
     for cell in cells:
-        text+= cell.get_text().strip().replace('\n', ' ')
+        text += cell.get_text().strip().replace('\n', ' ')
     palavras = text.split()
     text = ' '.join(palavras)
     return text
@@ -198,21 +211,26 @@ def extrair_valor(texto, campo):
     match = re.search(rf"{campo}R\$(\d+,\d+)", texto)
     return float(match.group(1).replace(',', '.')) if match else 0.0
 
+
 def extrair_idade(texto, tipo):
     match = re.search(rf"Idade {tipo}:(\d+)", texto)
     return int(match.group(1)) if match else 0
+
 
 def extrair_quantidade_maxima(texto):
     match = re.search(r"Quantidade Máxima:(\d+)", texto)
     return int(match.group(1)) if match else 0
 
+
 def extrair_media_permanencia(texto):
     match = re.search(r"Média Permanência:(\d+)", texto)
     return int(match.group(1)) if match else 0
 
+
 def extrair_pontos(texto):
     match = re.search(r"Pontos:(\d+)", texto)
     return int(match.group(1)) if match else 0
+
 
 def processar_csv_pacientes(request):
     if request.method == "POST":
@@ -226,11 +244,12 @@ def processar_csv_pacientes(request):
         file_path = default_storage.save(f"temp/{arquivo.name}", arquivo)
 
         with open(default_storage.path(file_path), newline='', encoding="utf-8-sig") as csvfile:
-            leitor = csv.DictReader(csvfile, delimiter=";")  # Usa tabulação como delimitador
+            # Usa tabulação como delimitador
+            leitor = csv.DictReader(csvfile, delimiter=";")
 
             for linha in leitor:
                 nome_paciente = linha.get("NOME_PACIENTE", "").strip()
-                
+
                 if nome_paciente:
                     Paciente.objects.get_or_create(nome=nome_paciente)
 
@@ -238,6 +257,7 @@ def processar_csv_pacientes(request):
         return redirect("importar_pacientes")
 
     return render(request, 'upload.html')
+
 
 def processar_csv_procedimentos(request):
     if request.method == "POST":
@@ -250,7 +270,8 @@ def processar_csv_procedimentos(request):
         file_path = default_storage.save(f"temp/{arquivo.name}", arquivo)
 
         with open(default_storage.path(file_path), newline='', encoding="utf-8-sig") as csvfile:
-            leitor = csv.DictReader(csvfile, delimiter=";")  # Usa tabulação como delimitador
+            # Usa tabulação como delimitador
+            leitor = csv.DictReader(csvfile, delimiter=";")
 
             for linha in leitor:
                 codigo = linha.get("COD_PROCEDIMENTO", "").strip()
@@ -258,10 +279,12 @@ def processar_csv_procedimentos(request):
 
                 if codigo and nome:
                     print(f"Importando procedimento: {codigo} - {nome}")
-                    ProcedimentoAghu.objects.get_or_create(codigo=codigo, nome=nome)
+                    ProcedimentoAghu.objects.get_or_create(
+                        codigo=codigo, nome=nome)
 
         messages.success(request, "Procedimentos importados com sucesso!")
         return redirect("importar_procedimentos")
+
 
 def processar_csv_especialidades(request):
     if request.method == "POST":
@@ -275,19 +298,22 @@ def processar_csv_especialidades(request):
         file_path = default_storage.save(f"temp/{arquivo.name}", arquivo)
 
         with open(default_storage.path(file_path), newline='', encoding="utf-8-sig") as csvfile:
-            leitor = csv.DictReader(csvfile, delimiter=";")  # Usa ponto e vírgula como delimitador
+            # Usa ponto e vírgula como delimitador
+            leitor = csv.DictReader(csvfile, delimiter=";")
 
             for linha in leitor:
                 codigo = linha.get("COD_ESPECIALIDADE", "").strip()
                 nome = linha.get("NOME_ESPECIALIDADE", "").strip()
 
                 if codigo and nome:
-                    Especialidade.objects.get_or_create(cod_especialidade=codigo, nome_especialidade=nome)
+                    Especialidade.objects.get_or_create(
+                        cod_especialidade=codigo, nome_especialidade=nome)
 
         messages.success(request, "Especialidades importadas com sucesso!")
         return redirect("importar_especialidades")
 
     return render(request, 'upload.html')
+
 
 def processar_csv_especialidades_procedimentos(request):
     if request.method == "POST":
@@ -307,7 +333,8 @@ def processar_csv_especialidades_procedimentos(request):
                 nome_especialidade = linha.get("especialidade", "").strip()
                 cod_procedimento = linha.get("cod_procedimento", "").strip()
                 nome_procedimento = linha.get("nome_procedimento", "").strip()
-                situacao_procedimento = linha.get("situacao_procedimento", "").strip()
+                situacao_procedimento = linha.get(
+                    "situacao_procedimento", "").strip()
 
                 if cod_especialidade and nome_especialidade and cod_procedimento and nome_procedimento:
                     especialidade, _ = Especialidade.objects.get_or_create(
@@ -322,7 +349,8 @@ def processar_csv_especialidades_procedimentos(request):
                         procedimento=procedimento
                     )
 
-        messages.success(request, "Especialidades e Procedimentos importados com sucesso!")
+        messages.success(
+            request, "Especialidades e Procedimentos importados com sucesso!")
         return redirect("importar_especialidades_procedimentos")
 
     return render(request, 'upload.html')

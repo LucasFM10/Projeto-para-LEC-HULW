@@ -2,11 +2,13 @@ from django.core.management.base import BaseCommand
 from fila_cirurgica.models import Medico, Especialidade
 import random
 
+
 class Command(BaseCommand):
     help = "Popula o banco de dados com 40 médicos aleatórios e especialidades."
 
     def handle(self, *args, **kwargs):
-        especialidades_disponiveis = list(Especialidade.objects.values_list("nome_especialidade", flat=True))
+        especialidades_disponiveis = list(
+            Especialidade.objects.values_list("nome_especialidade", flat=True))
 
         medicos_data = [
             ("Dr. João Silva", "M001"),
@@ -52,15 +54,20 @@ class Command(BaseCommand):
         ]
 
         for i, (nome, matricula) in enumerate(medicos_data):
-            medico, created = Medico.objects.get_or_create(matricula=matricula, nome=nome)
-            
+            medico, created = Medico.objects.get_or_create(
+                matricula=matricula, nome=nome)
+
             # Escolhe aleatoriamente de 1 a 3 especialidades para cada médico
             num_especialidades = random.randint(1, 3)
-            especialidades_nomes = random.sample(especialidades_disponiveis, min(num_especialidades, len(especialidades_disponiveis)))
-            especialidades = Especialidade.objects.filter(nome_especialidade__in=especialidades_nomes).all()
-            
+            especialidades_nomes = random.sample(especialidades_disponiveis, min(
+                num_especialidades, len(especialidades_disponiveis)))
+            especialidades = Especialidade.objects.filter(
+                nome_especialidade__in=especialidades_nomes).all()
+
             medico.especialidades.set(especialidades)
 
-            self.stdout.write(f"{'Criado' if created else 'Já existe'}: {nome} - Matrícula: {matricula} - Especialidades: {', '.join(especialidades_nomes)}")
+            self.stdout.write(
+                f"{'Criado' if created else 'Já existe'}: {nome} - Matrícula: {matricula} - Especialidades: {', '.join(especialidades_nomes)}")
 
-        self.stdout.write(self.style.SUCCESS("40 médicos cadastrados com sucesso!"))
+        self.stdout.write(self.style.SUCCESS(
+            "40 médicos cadastrados com sucesso!"))

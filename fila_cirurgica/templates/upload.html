@@ -1,105 +1,110 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Upload de documentos</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            text-align: center;
-            padding: 20px;
-        }
-        .container {
-            background: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
-            margin: auto;
-            margin-bottom: 20px;
-        }
-        h1 {
-            color: #333;
-        }
-        label {
-            font-weight: bold;
-            display: block;
-            margin: 15px 0 5px;
-        }
-        input {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0 15px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        button {
-            background: #28a745;
-            color: #fff;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover {
-            background: #218838;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        text-align: center;
+        padding: 20px;
+      }
+      
+      .container {
+        background: #fff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        max-width: 400px;
+        margin: auto;
+        margin-bottom: 20px;
+      }
+      
+      h1 {
+        color: #333;
+      }
+      
+      label {
+        font-weight: bold;
+        display: block;
+        margin: 15px 0 5px;
+      }
+      
+      input {
+        width: 100%;
+        padding: 8px;
+        margin: 5px 0 15px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+      
+      button {
+        background: #28a745;
+        color: #fff;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      
+      button:hover {
+        background: #218838;
+      }
     </style>
-</head>
-<body>
+  </head>
 
+  <body>
     <div class="container">
-        <h1>Cadastro de Pacientes</h1>
-        <form method="POST" action="{% url 'importar_pacientes' %}" enctype="multipart/form-data">
-            {% csrf_token %}
-            <label for="file_pacientes">Envie um arquivo CSV com pacientes:</label>
-            <input type="file" name="file_pacientes" accept=".csv" required>
-            <button type="submit">Importar Pacientes</button>
-        </form>
-    </div>
-
-    <div class="container">
-        <h1>Cadastro de Procedimentos Sigtap</h1>
-        <form method="POST" action="{% url 'importar_procedimentos' %}" enctype="multipart/form-data">
-            {% csrf_token %}
-            <label for="file_procedimentos">Envie um arquivo HTML com a tabela de procedimentos:</label>
-            <input type="file" name="file_procedimentos" accept=".html" required>
-            <button type="submit">Importar Procedimentos</button>
-        </form>
+      <h1>Cadastro de Pacientes</h1>
+      <form method="POST" action="{% url 'importar_pacientes' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="file_pacientes">Envie um arquivo CSV com pacientes:</label>
+        <input type="file" name="file_pacientes" accept=".csv" required />
+        <button type="submit">Importar Pacientes</button>
+      </form>
     </div>
 
     <div class="container">
-        <h1>Cadastro de Procedimentos AGHU</h1>
-        <form method="POST" action="{% url 'importar_procedimentos-aghu' %}" enctype="multipart/form-data">
-            {% csrf_token %}
-            <label for="file_procedimentos">Envie um arquivo CSV com os procedimentos AGHU:</label>
-            <input type="file" name="file_procedimentos" accept=".csv" required>
-            <button type="submit">Importar Procedimentos</button>
-        </form>
-    </div>
-    
-    <div class="container">
-        <h1>Cadastro de Especialidades</h1>
-        <form method="POST" action="{% url 'importar_especialidades' %}" enctype="multipart/form-data">
-            {% csrf_token %}
-            <label for="file_especialidades">Envie um arquivo CSV com as especialidades:</label>
-            <input type="file" name="file_especialidades" accept=".csv" required>
-            <button type="submit">Importar Especialidades</button>
-        </form>
+      <h1>Cadastro de Procedimentos Sigtap</h1>
+      <form method="POST" action="{% url 'importar_procedimentos' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="file_procedimentos">Envie um arquivo HTML com a tabela de procedimentos:</label>
+        <input type="file" name="file_procedimentos" accept=".html" required />
+        <button type="submit">Importar Procedimentos</button>
+      </form>
     </div>
 
     <div class="container">
-        <h1>Cadastro de Especialidades e Procedimentos</h1>
-        <form method="POST" action="{% url 'importar_especialidades_procedimentos' %}" enctype="multipart/form-data">
-            {% csrf_token %}
-            <label for="file_especialidade_procedimento">Envie um arquivo CSV com especialidades e procedimentos:</label>
-            <input type="file" name="file_especialidade_procedimento" accept=".csv" required>
-            <button type="submit">Importar Especialidade e Procedimento</button>
-        </form>
+      <h1>Cadastro de Procedimentos AGHU</h1>
+      <form method="POST" action="{% url 'importar_procedimentos-aghu' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="file_procedimentos">Envie um arquivo CSV com os procedimentos AGHU:</label>
+        <input type="file" name="file_procedimentos" accept=".csv" required />
+        <button type="submit">Importar Procedimentos</button>
+      </form>
     </div>
-    
-</body>
+
+    <div class="container">
+      <h1>Cadastro de Especialidades</h1>
+      <form method="POST" action="{% url 'importar_especialidades' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="file_especialidades">Envie um arquivo CSV com as especialidades:</label>
+        <input type="file" name="file_especialidades" accept=".csv" required />
+        <button type="submit">Importar Especialidades</button>
+      </form>
+    </div>
+
+    <div class="container">
+      <h1>Cadastro de Especialidades e Procedimentos</h1>
+      <form method="POST" action="{% url 'importar_especialidades_procedimentos' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="file_especialidade_procedimento">Envie um arquivo CSV com especialidades e procedimentos:</label>
+        <input type="file" name="file_especialidade_procedimento" accept=".csv" required />
+        <button type="submit">Importar Especialidade e Procedimento</button>
+      </form>
+    </div>
+  </body>
 </html>

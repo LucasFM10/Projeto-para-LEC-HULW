@@ -13,27 +13,32 @@ from unfold.admin import ModelAdmin
 admin.site.unregister(User)
 admin.site.unregister(Group)
 
+
 @admin.register(User)
 class UserAdmin(BaseUserAdmin, ModelAdmin):
     pass
+
 
 @admin.register(Group)
 class GroupAdmin(BaseGroupAdmin, ModelAdmin):
     pass
 
+
 @admin.register(Paciente)
 class PacienteAdmin(ModelAdmin):
-    list_display = ('nome', 'data_nascimento', 'sexo')  # Campos exibidos na lista de pacientes
+    # Campos exibidos na lista de pacientes
+    list_display = ('nome', 'data_nascimento', 'sexo')
 
     form = PacienteForm
-    
+
     search_fields = ['nome']
 
     class Media:
         js = (
-            "jquery.mask.min.js",
-            "custom.js"
+            "js/masks/jquery.mask.min.js",
+            "js/masks/custom.js"
         )
+
 
 @admin.register(ProcedimentoAghu)
 class ProcedimentoAdmin(ModelAdmin):
@@ -41,69 +46,78 @@ class ProcedimentoAdmin(ModelAdmin):
 
     def get_search_results(self, request, queryset, search_term):
         # Filtra apenas os procedimentos que possuem uma especialidade associada
-        queryset = queryset.filter(especialidadeprocedimento__isnull=False).distinct()
+        queryset = queryset.filter(
+            especialidadeprocedimento__isnull=False).distinct()
 
         return super().get_search_results(request, queryset, search_term)
 
+
 @admin.register(ListaEsperaCirurgica)
 class ListaEsperaCirurgicaAdmin(ModelAdmin):
-    list_display = ('get_especialidade', 'get_procedimento', 'get_paciente', 'get_posicao')
+    list_display = ('get_especialidade', 'get_procedimento',
+                    'get_paciente', 'get_posicao')
 
     readonly_fields = ['data_entrada']
-    
+
     form = ListaEsperaCirurgicaForm
-    
-    autocomplete_fields = ["procedimento", "paciente", "medico"]  # Aplica autocomplete corretamente
+
+    autocomplete_fields = ["procedimento", "paciente",
+                           "medico"]  # Aplica autocomplete corretamente
 
     list_filter_submit = True
 
     list_filter = [
-        ("procedimento__especialidadeprocedimento__especialidade", AutocompleteSelectMultipleFilter),
+        ("procedimento__especialidadeprocedimento__especialidade",
+         AutocompleteSelectMultipleFilter),
         ("medico", AutocompleteSelectMultipleFilter),
     ]
-    
+
     def get_especialidade(self, obj):
         """ Retorna a especialidade associada ao procedimento """
         if obj.procedimento:
-            especialidade_procedimento = EspecialidadeProcedimento.objects.filter(procedimento=obj.procedimento).first()
+            especialidade_procedimento = EspecialidadeProcedimento.objects.filter(
+                procedimento=obj.procedimento).first()
             return especialidade_procedimento.especialidade.nome_especialidade if especialidade_procedimento else "Sem Especialidade"
         return "Sem Especialidade"
-    
+
     get_especialidade.short_description = "Especialidade"
-    
+
     @admin.display(description="Procedimento Realizado")
     def get_procedimento(self, obj):
+
         return obj.procedimento
-    
+
     @admin.display(description="Nome do Paciente")
     def get_paciente(self, obj):
         return obj.paciente
-    
+
     class Media:
+
         js = (
             "https://code.jquery.com/jquery-3.6.0.min.js",  # Garante o carregamento do jQuery
-            "custom1.js",
+            "js/custom_admin_lista.js",
         )
-
 
 
 @admin.register(Especialidade)
 class EspecialidadeAdmin(ModelAdmin):
-    list_display = ('cod_especialidade','nome_especialidade')
-    
+    list_display = ('cod_especialidade', 'nome_especialidade')
+
     search_fields = ['nome_especialidade', 'cod_especialidade']
+
 
 @admin.register(Medico)
 class MedicoAdmin(ModelAdmin):
-    list_display = ('nome','matricula')
-    
+    list_display = ('nome', 'matricula')
+
     autocomplete_fields = ['especialidades']
     search_fields = ['nome']
 
+
 @admin.register(EspecialidadeProcedimento)
 class EspecialidadeProcedimentoAdmin(ModelAdmin):
-    list_display = ('especialidade','procedimento')
-    
+    list_display = ('especialidade', 'procedimento')
+
     autocomplete_fields = ['especialidade', 'procedimento']
-    
+
     search_fields = ['especialidade__nome_especialidade', 'procedimento__nome']
