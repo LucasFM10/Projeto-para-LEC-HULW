@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.models import User, Group
 from unfold.contrib.filters.admin import AutocompleteSelectMultipleFilter
+from simple_history.admin import SimpleHistoryAdmin
 
 from django.contrib import admin
 from .models import Paciente, ListaEsperaCirurgica, ProcedimentoAghu, Especialidade, Medico, EspecialidadeProcedimento
@@ -53,7 +54,7 @@ class ProcedimentoAdmin(ModelAdmin):
 
 
 @admin.register(ListaEsperaCirurgica)
-class ListaEsperaCirurgicaAdmin(ModelAdmin):
+class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
     list_display = ('get_especialidade', 'get_procedimento',
                     'get_paciente', 'get_posicao')
 
@@ -90,6 +91,10 @@ class ListaEsperaCirurgicaAdmin(ModelAdmin):
     @admin.display(description="Nome do Paciente")
     def get_paciente(self, obj):
         return obj.paciente
+
+    def history_view(self, request, object_id, extra_context=None):
+        print(object_id)
+        return super().history_view(request, object_id, extra_context)
 
     class Media:
 

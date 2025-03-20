@@ -2,6 +2,8 @@ from django.db import models
 import datetime
 from django.db import models
 
+from simple_history.models import HistoricalRecords
+
 
 class Paciente(models.Model):
 
@@ -125,7 +127,7 @@ class Medico(models.Model):
 
 
 class ListaEsperaCirurgica(models.Model):
-
+    history = HistoricalRecords(inherit=True)
     paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE)
     procedimento = models.ForeignKey(
         ProcedimentoAghu, on_delete=models.CASCADE, blank=True, null=True)

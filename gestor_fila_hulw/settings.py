@@ -38,8 +38,11 @@ INSTALLED_APPS = [
     'unfold',
     'unfold.contrib.forms',
     'unfold.contrib.filters',
+    "unfold.contrib.simple_history",
 
     'fila_cirurgica',
+
+    'simple_history',
 
     'django.contrib.admin',
     'django.contrib.auth',
