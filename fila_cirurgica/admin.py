@@ -1,8 +1,9 @@
+from django.db.models import Q
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.models import User, Group
-from unfold.contrib.filters.admin import AutocompleteSelectMultipleFilter
+from unfold.contrib.filters.admin import AutocompleteSelectMultipleFilter, DropdownFilter
 from simple_history.admin import SimpleHistoryAdmin
 
 from django.contrib import admin
@@ -46,9 +47,24 @@ class ProcedimentoAdmin(ModelAdmin):
     search_fields = ['codigo', 'nome']
 
     def get_search_results(self, request, queryset, search_term):
-        # Filtra apenas os procedimentos que possuem uma especialidade associada
-        queryset = queryset.filter(
-            especialidadeprocedimento__isnull=False).distinct()
+        query_dict = request.GET.dict()
+        print(query_dict)
+
+        # Começa com um filtro base
+        filter_conditions = Q()
+
+        # Verifica se o 'model_name' no dicionário GET é 'listaesperacirurgica'
+        if query_dict.get('model_name') == 'listaesperacirurgica':
+            # Adiciona o filtro para listaesperacirurgica
+            filter_conditions &= Q(listaesperacirurgica__isnull=False)
+
+        # Verifica se o 'mostrarapenasprocedimentoscomespecialidade' é True
+        if query_dict.get('mostrarapenasprocedimentoscomespecialidade') == 'true':
+            # Aplica filtro para especialidadeprocedimento
+            filter_conditions &= Q(especialidadeprocedimento__isnull=False)
+
+        # Aplica todos os filtros ao queryset de uma vez
+        queryset = queryset.filter(filter_conditions).distinct()
 
         return super().get_search_results(request, queryset, search_term)
 
@@ -69,6 +85,8 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
 
     list_filter = [
         ("procedimento__especialidadeprocedimento__especialidade",
+         AutocompleteSelectMultipleFilter),
+        ("procedimento",
          AutocompleteSelectMultipleFilter),
         ("medico", AutocompleteSelectMultipleFilter),
     ]
