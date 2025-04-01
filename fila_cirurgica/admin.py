@@ -48,23 +48,12 @@ class ProcedimentoAdmin(ModelAdmin):
     search_fields = ['codigo', 'nome']
 
     def get_search_results(self, request, queryset, search_term):
-        query_dict = request.GET.dict()
-        print(query_dict)
 
-        # Começa com um filtro base
         filter_conditions = Q()
 
-        # Verifica se o 'model_name' no dicionário GET é 'listaesperacirurgica'
-        if query_dict.get('model_name') == 'listaesperacirurgica':
-            # Adiciona o filtro para listaesperacirurgica
-            filter_conditions &= Q(listaesperacirurgica__isnull=False)
+        # Aplica filtro para especialidadeprocedimento
+        filter_conditions &= Q(especialidadeprocedimento__isnull=False)
 
-        # Verifica se o 'mostrarapenasprocedimentoscomespecialidade' é True
-        if query_dict.get('mostrarapenasprocedimentoscomespecialidade') == 'true':
-            # Aplica filtro para especialidadeprocedimento
-            filter_conditions &= Q(especialidadeprocedimento__isnull=False)
-
-        # Aplica todos os filtros ao queryset de uma vez
         queryset = queryset.filter(filter_conditions).distinct()
 
         return super().get_search_results(request, queryset, search_term)
@@ -92,6 +81,7 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
         ("medico", AutocompleteSelectMultipleFilter),
     ]
 
+    @admin.display(description="Especialidade")
     def get_especialidade(self, obj):
         """ Retorna a especialidade associada ao procedimento """
         if obj.procedimento:
@@ -112,13 +102,6 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
     def history_view(self, request, object_id, extra_context=None):
         print(object_id)
         return super().history_view(request, object_id, extra_context)
-
-    class Media:
-
-        js = (
-            "https://code.jquery.com/jquery-3.6.0.min.js",  # Garante o carregamento do jQuery
-            "js/custom_admin_lista.js",
-        )
 
     @admin.display(description="Posição na Fila")
     def get_posicao(self, obj):
