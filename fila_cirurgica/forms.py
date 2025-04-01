@@ -58,7 +58,7 @@ class ListaEsperaCirurgicaForm(forms.ModelForm):
 
     class Meta:
         model = ListaEsperaCirurgica
-        fields = ['especialidade', 'procedimento', 'paciente',
+        fields = ['especialidade', 'procedimento', 'paciente', 'paciente_oncologico', 'urgencia', 'medida_judicial',
                   'medico', 'situacao', 'observacoes', 'data_novo_contato']
 
     def __init__(self, *args, **kwargs):

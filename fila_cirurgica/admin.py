@@ -1,3 +1,4 @@
+from django.db.models import Case, When, IntegerField
 from django.db.models import Q
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -71,8 +72,8 @@ class ProcedimentoAdmin(ModelAdmin):
 
 @admin.register(ListaEsperaCirurgica)
 class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
-    list_display = ('get_especialidade', 'get_procedimento',
-                    'get_paciente', 'get_posicao')
+    list_display = ('get_paciente', 'paciente_oncologico', 'urgencia', 'medida_judicial',
+                    'get_especialidade', 'get_procedimento', 'get_posicao')
 
     readonly_fields = ['data_entrada']
 
@@ -99,8 +100,6 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
             return especialidade_procedimento.especialidade.nome_especialidade if especialidade_procedimento else "Sem Especialidade"
         return "Sem Especialidade"
 
-    get_especialidade.short_description = "Especialidade"
-
     @admin.display(description="Procedimento Realizado")
     def get_procedimento(self, obj):
 
@@ -120,6 +119,32 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
             "https://code.jquery.com/jquery-3.6.0.min.js",  # Garante o carregamento do jQuery
             "js/custom_admin_lista.js",
         )
+
+    @admin.display(description="Posição na Fila")
+    def get_posicao(self, obj):
+        queryset = ListaEsperaCirurgica.objects.annotate(
+            prioridade=Case(
+                When(medida_judicial=True, then=0),
+                When(paciente_oncologico=True, then=1),
+                When(urgencia=True, then=2),
+                default=3,
+                output_field=IntegerField()
+            )
+        ).order_by('prioridade', 'data_entrada').values_list('id', flat=True)
+
+        return list(queryset).index(obj.id) + 1
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.annotate(
+            prioridade=Case(
+                When(medida_judicial=True, then=0),
+                When(paciente_oncologico=True, then=1),
+                When(urgencia=True, then=2),
+                default=3,
+                output_field=IntegerField()
+            )
+        ).order_by('prioridade', 'data_entrada')
 
 
 @admin.register(Especialidade)

@@ -136,6 +136,13 @@ class ListaEsperaCirurgica(models.Model):
 
     data_entrada = models.DateTimeField(auto_now_add=True)
 
+    paciente_oncologico = models.BooleanField(
+        verbose_name="Paciente Oncológico", default=False, null=True)
+    urgencia = models.BooleanField(
+        verbose_name="Urgência", default=False, null=True)
+    medida_judicial = models.BooleanField(
+        verbose_name="Medida Judicial", default=False, null=True)
+
     # PRIORIDADE_CLINICA_CHOICES = [
     #     ('P0', 'ONCOLOGIA'),
     #     ('P1', 'PACIENTES COM ALTA PRIORIDADE'),
@@ -170,17 +177,10 @@ class ListaEsperaCirurgica(models.Model):
     class Meta:
         verbose_name = "Lista de Espera Cirúrgica"
         verbose_name_plural = "Lista de Espera Cirúrgica"
-        ordering = ['data_entrada']
 
     def __str__(self):
         # esperando para {self.especialidadeprocedimento.procedimento}"
         return f"{self.paciente}"
-
-    def get_posicao(self):
-        # Obtém a posição do paciente na fila ordenada
-        return list(ListaEsperaCirurgica.objects.order_by('data_entrada').values_list('id', flat=True)).index(self.id) + 1
-
-    get_posicao.short_description = "Posição na Fila"  # Nome da coluna no Django Admin
 
     # pontos = models.IntegerField(default=0, editable=False)
 
