@@ -61,8 +61,8 @@ class ProcedimentoAdmin(ModelAdmin):
 
 @admin.register(ListaEsperaCirurgica)
 class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
-    list_display = ('get_paciente', 'paciente_oncologico', 'urgencia', 'medida_judicial',
-                    'get_especialidade', 'get_procedimento', 'get_posicao')
+    list_display = ('get_posicao', 'get_paciente', 'get_oncologico', 'urgencia', 'medida_judicial',
+                    'get_especialidade', 'get_procedimento')
 
     readonly_fields = ['data_entrada']
 
@@ -116,6 +116,10 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
         ).order_by('prioridade', 'data_entrada').values_list('id', flat=True)
 
         return list(queryset).index(obj.id) + 1
+
+    @admin.display(description="Paciente Oncológico", boolean=True)
+    def get_oncologico(pself, obj):
+        return obj.paciente_oncologico
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
