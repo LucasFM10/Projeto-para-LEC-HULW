@@ -16,24 +16,30 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from django.conf import settings
+from django.conf.urls.i18n import i18n_patterns
+from django.conf.urls.static import static
 from . import views
 
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    # Inclui as URLs da app
-    path("fila_cirurgica/", include("fila_cirurgica.urls")),
-    path('', views.home, name='upload'),
-    path("importar/pacientes/", views.processar_csv_pacientes,
-         name="importar_pacientes"),
-    path("importar/procedimentos/", views.home, name="importar_procedimentos"),
-    path("importar/procedimentos-aghu/", views.processar_csv_procedimentos,
-         name="importar_procedimentos-aghu"),
-    path("importar/especialidades/", views.processar_csv_especialidades,
-         name="importar_especialidades"),
-    path("importar/especialidadesprocedimentos/", views.processar_csv_especialidades_procedimentos,
-         name="importar_especialidades_procedimentos"),
-]
+urlpatterns = (
+    [
+        # Inclui as URLs da app
+        path("fila_cirurgica/", include("fila_cirurgica.urls")),
+        path('', views.home, name='upload'),
+        path("importar/pacientes/", views.processar_csv_pacientes,
+            name="importar_pacientes"),
+        path("importar/procedimentos/", views.home, name="importar_procedimentos"),
+        path("importar/procedimentos-aghu/", views.processar_csv_procedimentos,
+            name="importar_procedimentos-aghu"),
+        path("importar/especialidades/", views.processar_csv_especialidades,
+            name="importar_especialidades"),
+        path("importar/especialidadesprocedimentos/", views.processar_csv_especialidades_procedimentos,
+            name="importar_especialidades_procedimentos"),
 
-urlpatterns += [
-    path("i18n/", include("django.conf.urls.i18n")),  # Ativa a troca de idioma
-]
+        path("i18n/", include("django.conf.urls.i18n")),
+    ]
+    + i18n_patterns(
+        path("admin/", admin.site.urls),
+    )
+    + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+)

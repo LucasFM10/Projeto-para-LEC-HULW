@@ -65,13 +65,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-LANGUAGE_CODE = "pt-br"
-
-USE_I18N = True
+LANGUAGE_CODE = "pt"
 
 LANGUAGES = (
     ("en", _("English")),
-    ("pt-br", _("Portuguese (Brazil)")),
+    ("pt", _("Portuguese")),
+    ("de", _("German")),
 )
 
 ROOT_URLCONF = 'gestor_fila_hulw.urls'
