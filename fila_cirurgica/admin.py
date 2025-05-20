@@ -5,7 +5,10 @@ from simple_history.admin import SimpleHistoryAdmin
 from unfold.admin import ModelAdmin
 from unfold.contrib.filters.admin import AutocompleteSelectMultipleFilter
 from django.contrib.admin import SimpleListFilter
-
+from django.db.models import Count
+from django.template.response import TemplateResponse
+from django.urls import path
+from django.http import JsonResponse
 from .models import (
     Paciente,
     ListaEsperaCirurgica,
@@ -13,6 +16,7 @@ from .models import (
     Especialidade,
     Medico,
     EspecialidadeProcedimento,
+    IndicadorEspecialidade,
 )
 from .forms import PacienteForm, ListaEsperaCirurgicaForm
 
@@ -27,6 +31,36 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
 @admin.register(Group)
 class GroupAdmin(BaseGroupAdmin, ModelAdmin):
     pass
+
+
+@admin.register(IndicadorEspecialidade)
+class IndicadorEspecialidadeAdmin(admin.ModelAdmin):
+    # não exibe os botões de adicionar/editar
+    has_add_permission = lambda self, request: False
+    has_change_permission = lambda self, request, obj=None: False
+    has_delete_permission = lambda self, request, obj=None: False
+
+    change_list_template = 'admin/indicadores_especialidade.html'
+
+    def changelist_view(self, request, extra_context=None):
+        # Obtém contagem por especialidade
+        qs = (
+            ListaEsperaCirurgica.objects
+                .values('especialidade__nome_especialidade')
+                .annotate(total=Count('id'))
+        )
+        total_geral = ListaEsperaCirurgica.objects.count() or 1
+        # prepara dados para gráfico
+        labels = [item['especialidade__nome_especialidade'] for item in qs]
+        data = [item['total'] for item in qs]
+        percentages = [round(item['total'] / total_geral * 100, 2) for item in qs]
+
+        context = {
+            'labels': labels,
+            'data': data,
+            'percentages': percentages,
+        }
+        return TemplateResponse(request, self.change_list_template, {**self.admin_site.each_context(request), **context})
 
 
 @admin.register(Paciente)
@@ -67,7 +101,7 @@ class DemandaPedagogicaFilter(SimpleListFilter):
 class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
     form = ListaEsperaCirurgicaForm
     readonly_fields = ['data_entrada']
-    autocomplete_fields = ['procedimento', 'paciente', 'medico']
+    autocomplete_fields = ['especialidade', 'procedimento', 'paciente', 'medico']
 
     list_display = (
         'get_posicao',
@@ -80,7 +114,7 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
     )
     list_filter_submit = True
     list_filter = [
-        ('procedimento__especialidadeprocedimento__especialidade', AutocompleteSelectMultipleFilter),
+        ('especialidade', AutocompleteSelectMultipleFilter),
         ('procedimento', AutocompleteSelectMultipleFilter),
         ('medico', AutocompleteSelectMultipleFilter),
         (DemandaPedagogicaFilter)

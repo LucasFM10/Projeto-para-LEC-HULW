@@ -1,6 +1,8 @@
 # models.py
 from django.db import models
 from django.db.models import Case, When, IntegerField, Exists, OuterRef
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
 
 
@@ -13,15 +15,18 @@ class Paciente(models.Model):
     nome = models.CharField(max_length=255)
     data_nascimento = models.DateField(blank=True, null=True, verbose_name="Data de nascimento")
     sexo = models.CharField(max_length=1, choices=SEXO_CHOICES, blank=True, null=True)
-
     telefone_contato_principal = models.CharField(
-        max_length=15, verbose_name="Telefone para contato principal", blank=True, null=True)
+        max_length=15, verbose_name="Telefone para contato principal", blank=True, null=True
+    )
     telefone_contato_secundario = models.CharField(
-        max_length=15, verbose_name="Telefone secundário", blank=True, null=True)
+        max_length=15, verbose_name="Telefone secundário", blank=True, null=True
+    )
     nome_responsavel = models.CharField(
-        max_length=255, verbose_name="Nome do responsável", blank=True, null=True)
+        max_length=255, verbose_name="Nome do responsável", blank=True, null=True
+    )
     numero_prontuario = models.CharField(
-        max_length=20, verbose_name="Número do prontuário", blank=True, null=True)
+        max_length=20, verbose_name="Número do prontuário", blank=True, null=True
+    )
 
     def __str__(self):
         return self.nome
@@ -77,7 +82,9 @@ class ProcedimentoSigtap(models.Model):
 class Especialidade(models.Model):
     cod_especialidade = models.CharField(max_length=10, unique=True)
     nome_especialidade = models.CharField(max_length=255)
-    demanda_pedagogica = models.BooleanField(verbose_name="Demanda Pedagógica", default=False, null=True)
+    demanda_pedagogica = models.BooleanField(
+        verbose_name="Demanda Pedagógica", default=False, null=True
+    )
 
     def __str__(self):
         return self.nome_especialidade
@@ -125,9 +132,7 @@ class ListaEsperaCirurgicaQuerySet(models.QuerySet):
                 default=3,
                 output_field=IntegerField()
             ),
-            # booleano: True se existir na subquery, False caso contrário
             demanda_pedagogica_bool=Exists(demanda_ped_qs),
-            # converte em número para ordenar
             demanda_pedagogica_num=Case(
                 When(demanda_pedagogica_bool=True, then=0),
                 default=1,
@@ -159,20 +164,6 @@ class ListaEsperaCirurgica(models.Model):
         ('SEM', 'Sem Brevidade'),
     ]
 
-    paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE)
-    procedimento = models.ForeignKey(ProcedimentoAghu, on_delete=models.CASCADE, blank=True, null=True)
-    medico = models.ForeignKey(Medico, on_delete=models.CASCADE, blank=True, null=True, verbose_name="Médico")
-
-    data_entrada = models.DateTimeField(auto_now_add=True)
-
-    prioridade = models.CharField(
-        max_length=3,
-        choices=PRIORIDADE_CHOICES,
-        verbose_name="Tipo de Prioridade",
-        default='SEM',
-    )
-    medida_judicial = models.BooleanField(default=False, null=True, verbose_name="Medida Judicial")
-
     SITUACAO_CHOICES = [
         ('CA', 'CONSULTA AGENDADA'),
         ('AE', 'EXAMES PENDENTES'),
@@ -185,6 +176,13 @@ class ListaEsperaCirurgica(models.Model):
         ('CRS', 'CONTATO REALIZADO COM SUCESSO'),
     ]
 
+    paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE)
+    procedimento = models.ForeignKey(ProcedimentoAghu, on_delete=models.CASCADE)
+    especialidade = models.ForeignKey(Especialidade, on_delete=models.CASCADE)
+    medico = models.ForeignKey(Medico, on_delete=models.CASCADE, blank=True, null=True, verbose_name="Médico")
+    data_entrada = models.DateTimeField(auto_now_add=True)
+    prioridade = models.CharField(max_length=3, choices=PRIORIDADE_CHOICES, default='SEM')
+    medida_judicial = models.BooleanField(default=False, null=True, verbose_name="Medida Judicial")
     situacao = models.CharField(choices=SITUACAO_CHOICES, verbose_name="Situação")
     observacoes = models.CharField(max_length=255, blank=True, null=True, verbose_name="Observações")
     data_novo_contato = models.DateField(blank=True, null=True, verbose_name="Data para novo contato")
@@ -196,7 +194,20 @@ class ListaEsperaCirurgica(models.Model):
         verbose_name_plural = "Lista de Espera Cirúrgica"
 
     def __str__(self):
-        return f"{self.paciente} esperando {self.procedimento}"
+        return f"{self.paciente} esperando {self.procedimento} em {self.especialidade}"
+
+    def clean(self):
+        super().clean()
+        from .models import EspecialidadeProcedimento
+        if not EspecialidadeProcedimento.objects.filter(
+            procedimento=self.procedimento,
+            especialidade=self.especialidade
+        ).exists():
+            raise ValidationError({
+                'especialidade': _(
+                    'Especialidade não associada ao procedimento selecionado.'
+                )
+            })
 
     def get_posicao(self):
         """
@@ -205,11 +216,12 @@ class ListaEsperaCirurgica(models.Model):
         qs = type(self).objects.ordered().values_list('id', flat=True)
         return list(qs).index(self.id) + 1
 
-    @property
-    def especialidade(self):
-        """
-        Retorna o nome da especialidade associada ao procedimento.
-        """
-        from .models import EspecialidadeProcedimento
-        ep = EspecialidadeProcedimento.objects.filter(procedimento=self.procedimento).first()
-        return ep.especialidade.nome_especialidade if ep else None
+    
+class IndicadorEspecialidade(ListaEsperaCirurgica):
+    """
+    Proxy model para exibir indicadores de especialidade no admin.
+    """
+    class Meta:
+        proxy = True
+        verbose_name = _("Indicadores de Especialidades")
+        verbose_name_plural = _("Indicadores de Especialidades")
