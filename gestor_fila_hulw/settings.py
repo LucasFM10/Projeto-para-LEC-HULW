@@ -100,10 +100,10 @@ WSGI_APPLICATION = 'gestor_fila_hulw.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'projeto_hulw',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': 'localhost',
+        'NAME': 'd592fj7ir1fa99',
+        'USER': 'udker5tm8iheud',
+        'PASSWORD': 'pc6351ca886fb5c47681cef34bfaa650c99ddea70bc3912513d36210ac760c7ff',
+        'HOST': 'casrkuuedp6an1.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com',
         'PORT': '5432',
     }
 }
