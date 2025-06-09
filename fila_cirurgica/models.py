@@ -156,7 +156,11 @@ class ListaEsperaCirurgicaManager(models.Manager):
         )
 
 class ListaEsperaCirurgica(models.Model):
-    history = HistoricalRecords(inherit=True)
+    history = HistoricalRecords(
+        inherit=True,
+        verbose_name=_("Histórico de Lista de Espera Cirúrgica"),
+        history_change_reason_field=models.TextField(null=True, blank=True, verbose_name=_("Motivo da alteração"))
+    )
 
     PRIORIDADE_CHOICES = [
         ('ONC', 'Paciente Oncológico'),

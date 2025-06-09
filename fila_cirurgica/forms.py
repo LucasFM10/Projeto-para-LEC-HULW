@@ -27,6 +27,7 @@ class PacienteForm(forms.ModelForm):
                 'class': widget.attrs.get('class', '') + ' mask-telefone'
             })
 
+import unfold.widgets
 
 class ListaEsperaCirurgicaForm(forms.ModelForm):
     class Meta:
@@ -34,8 +35,15 @@ class ListaEsperaCirurgicaForm(forms.ModelForm):
         fields = [
             'especialidade','procedimento', 'paciente',
             'prioridade', 'medida_judicial', 'medico',
-            'situacao', 'observacoes', 'data_novo_contato'
+            'situacao', 'observacoes', 'data_novo_contato',
+            'change_reason'
         ]
+        
+    change_reason = forms.CharField(
+        label="Motivo da alteração",
+        max_length=100,
+        required=True,
+    )
 
     def clean(self):
         cleaned = super().clean()

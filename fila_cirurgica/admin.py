@@ -19,6 +19,11 @@ from .models import (
     IndicadorEspecialidade,
 )
 from .forms import PacienteForm, ListaEsperaCirurgicaForm
+from django.utils.timezone import now
+from datetime import timedelta
+from django.db.models.functions import TruncMonth
+from django.db.models import Count, Min
+from django import forms
 
 # Registro de usuário e grupo personalizados
 admin.site.unregister(User)
@@ -35,6 +40,7 @@ class GroupAdmin(BaseGroupAdmin, ModelAdmin):
 
 @admin.register(IndicadorEspecialidade)
 class IndicadorEspecialidadeAdmin(admin.ModelAdmin):
+
     # não exibe os botões de adicionar/editar
     has_add_permission = lambda self, request: False
     has_change_permission = lambda self, request, obj=None: False
@@ -43,24 +49,84 @@ class IndicadorEspecialidadeAdmin(admin.ModelAdmin):
     change_list_template = 'admin/indicadores_especialidade.html'
 
     def changelist_view(self, request, extra_context=None):
+        # últimos 3 meses
+        hoje = now().date()
+        inicio_periodo = hoje.replace(day=1) - timedelta(days=60)
         # Obtém contagem por especialidade
         qs = (
             ListaEsperaCirurgica.objects
                 .values('especialidade__nome_especialidade')
                 .annotate(total=Count('id'))
         )
+        # Agrupamento por mês
+        qs_mensal = (
+            ListaEsperaCirurgica.objects
+            .filter(data_entrada__date__gte=inicio_periodo)
+            .annotate(mes=TruncMonth('data_entrada'))
+            .values('mes')
+            .annotate(total=Count('id'))
+            .order_by('mes')
+        )
         total_geral = ListaEsperaCirurgica.objects.count() or 1
         # prepara dados para gráfico
         labels = [item['especialidade__nome_especialidade'] for item in qs]
         data = [item['total'] for item in qs]
         percentages = [round(item['total'] / total_geral * 100, 2) for item in qs]
+        labels_bar = [item['mes'].strftime('%b/%Y') for item in qs_mensal]
+        data_bar = [item['total'] for item in qs_mensal]
 
         context = {
             'labels': labels,
             'data': data,
             'percentages': percentages,
+            'labels_bar': labels_bar,
+            'data_bar': data_bar,
         }
-        return TemplateResponse(request, self.change_list_template, {**self.admin_site.each_context(request), **context})
+        
+        # Top 10 procedimentos com mais pacientes --------------
+        qs_proc_count = (
+            ListaEsperaCirurgica.objects
+            .values('procedimento__nome')
+            .annotate(total=Count('id'))
+            .order_by('-total')[:10]
+        )
+        labels_proc_count = [i['procedimento__nome'] for i in qs_proc_count]
+        data_proc_count   = [i['total'] for i in qs_proc_count]
+
+        #  Top 10 procedimentos com maior tempo de espera -------
+        qs_proc_wait = (
+            ListaEsperaCirurgica.objects
+            .values('procedimento__nome')
+            .annotate(first_dt=Min('data_entrada'))
+        )
+        # converte em lista de tuplas (nome, dias_espera) e ordena
+        today = now()
+        wait_list = [
+            (i['procedimento__nome'], (today - i['first_dt']).days)
+            for i in qs_proc_wait if i['first_dt'] is not None
+        ]
+        wait_list.sort(key=lambda x: x[1], reverse=True)
+        wait_list = wait_list[:10]                         # top-10
+        labels_proc_wait = [w[0] for w in wait_list]
+        data_proc_wait   = [w[1] for w in wait_list]
+
+        context = {
+            'labels': labels,
+            'data': data,
+            'percentages': percentages,
+            'labels_bar': labels_bar,
+            'data_bar': data_bar,
+            # novos conjuntos
+            'labels_proc_count': labels_proc_count,
+            'data_proc_count': data_proc_count,
+            'labels_proc_wait': labels_proc_wait,
+            'data_proc_wait': data_proc_wait,
+        }
+        return TemplateResponse(
+            request,
+            self.change_list_template,
+            {**self.admin_site.each_context(request), **context},
+        )
 
 
 @admin.register(Paciente)
@@ -96,6 +162,14 @@ class DemandaPedagogicaFilter(SimpleListFilter):
                 procedimento__especialidadeprocedimento__especialidade__demanda_pedagogica=True
             ).distinct()
         return queryset
+    
+@admin.action(description="Inserir entrada em campanha")
+def add_campanha(modeladmin, request, queryset):
+    queryset.update(campanha=True)
+
+@admin.action(description="Remover entrada de campanha")
+def remove_campanha(modeladmin, request, queryset):
+    queryset.update(campanha=False)
 
 @admin.register(ListaEsperaCirurgica)
 class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
@@ -131,6 +205,26 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
                 'data_entrada'
             )
         )
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields['change_reason'].widget = forms.TextInput(attrs={
+            "class": (
+                "border border-base-200 bg-white font-medium min-w-20 placeholder-base-400 rounded shadow-sm "
+                "text-font-default-light text-sm focus:ring focus:ring-primary-300 focus:border-primary-600 "
+                "focus:outline-none group-[.errors]:border-red-600 group-[.errors]:focus:ring-red-200 "
+                "dark:bg-base-900 dark:border-base-700 dark:text-font-default-dark dark:focus:border-primary-600 "
+                "dark:focus:ring-primary-700 dark:focus:ring-opacity-50 dark:group-[.errors]:border-red-500 "
+                "dark:group-[.errors]:focus:ring-red-600/40 px-3 py-2 w-full max-w-2xl"
+            ),
+            "placeholder": "Motivo da alteração"
+        })
+        return form
+
+    def save_model(self, request, obj, form, change):
+        obj._change_reason = form.cleaned_data["change_reason"]
+        super().save_model(request, obj, form, change)
+
 
     @admin.display(description="Demanda Pedagógica", boolean=True)
     def demanda_pedagogica(self, obj):
