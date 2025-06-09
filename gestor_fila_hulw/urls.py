@@ -23,7 +23,7 @@ from . import views
 
 urlpatterns = (
     [
-        path('admin/', admin.site.urls),
+        # Inclui as URLs da app
         path("fila_cirurgica/", include("fila_cirurgica.urls")),
         path('', views.home, name='upload'),
         path("importar/pacientes/", views.processar_csv_pacientes,
@@ -38,5 +38,8 @@ urlpatterns = (
 
         path("i18n/", include("django.conf.urls.i18n")),
     ]
+    + i18n_patterns(
+        path("app/admin/", admin.site.urls),
+    )
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 )
