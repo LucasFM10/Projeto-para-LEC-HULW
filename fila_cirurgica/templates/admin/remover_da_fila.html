@@ -1,0 +1,18 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h2>Remover pacientes da fila</h2>
+
+<form method="post">{% csrf_token %}
+    <p>Você selecionou {{ pacientes|length }} paciente(s).</p>
+    <p>Selecione o motivo da saída:</p>
+    <select name="motivo" required>
+        <option value="">---------</option>
+        {% for cod, label in motivos %}
+            <option value="{{ cod }}">{{ label }}</option>
+        {% endfor %}
+    </select>
+    <br><br>
+    <input type="submit" value="Confirmar remoção" class="default">
+    <a href=".." class="button cancel-button">Cancelar</a>
+</form>
+{% endblock %}
