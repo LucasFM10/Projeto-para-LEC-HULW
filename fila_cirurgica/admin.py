@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin, GroupAdmin as BaseGroupAdmin
 from simple_history.admin import SimpleHistoryAdmin
@@ -24,6 +24,7 @@ from datetime import timedelta
 from django.db.models.functions import TruncMonth
 from django.db.models import Count, Min
 from django import forms
+from django.shortcuts import redirect, render
 
 # Registro de usuário e grupo personalizados
 admin.site.unregister(User)
