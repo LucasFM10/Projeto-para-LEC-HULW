@@ -225,6 +225,44 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
         obj._change_reason = form.cleaned_data["change_reason"]
         super().save_model(request, obj, form, change)
 
+    
+    list_display = ('paciente', 'procedimento', 'especialidade', 'ativo')
+    actions = ['remover_da_fila']
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'remover-da-fila/',
+                self.admin_site.admin_view(self.remover_da_fila_view),
+                name='remover-da-fila',
+            ),
+        ]
+        return custom_urls + urls
+
+    def remover_da_fila(self, request, queryset):
+        selected = queryset.values_list('pk', flat=True)
+        return redirect(f'./remover-da-fila/?ids={",".join(str(pk) for pk in selected)}')
+
+    remover_da_fila.short_description = "Remover da fila com justificativa"
+
+    def remover_da_fila_view(self, request):
+        ids = request.GET.get('ids', '').split(',')
+        queryset = ListaEsperaCirurgica.objects.filter(pk__in=ids)
+
+        if request.method == 'POST':
+            motivo = request.POST.get('motivo')
+            if not motivo:
+                messages.error(request, "Você deve selecionar um motivo.")
+            else:
+                queryset.update(ativo=False, motivo_saida=motivo)
+                self.message_user(request, f"{queryset.count()} pacientes removidos da fila.")
+                return redirect('..')  # volta pro changelist
+
+        return render(request, 'admin/remover_da_fila.html', {
+            'pacientes': queryset,
+            'motivos': ListaEsperaCirurgica.MOTIVO_SAIDA_CHOICES,
+        })
 
     @admin.display(description="Demanda Pedagógica", boolean=True)
     def demanda_pedagogica(self, obj):

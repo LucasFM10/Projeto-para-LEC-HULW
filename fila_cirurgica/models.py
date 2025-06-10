@@ -190,6 +190,21 @@ class ListaEsperaCirurgica(models.Model):
     situacao = models.CharField(choices=SITUACAO_CHOICES, verbose_name="Situação")
     observacoes = models.CharField(max_length=255, blank=True, null=True, verbose_name="Observações")
     data_novo_contato = models.DateField(blank=True, null=True, verbose_name="Data para novo contato")
+    
+    MOTIVO_SAIDA_CHOICES = [
+        ('MORTE', 'Paciente faleceu'),
+        ('OUTRO_LOCAL', 'Cirurgia realizada em outro local'),
+        ('AUTOEXCLUSAO', 'Paciente solicitou autoexclusão da fila'),
+    ]
+
+    ativo = models.BooleanField(default=True, verbose_name="Está ativo na fila?")
+    motivo_saida = models.CharField(
+        max_length=20,
+        choices=MOTIVO_SAIDA_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name="Motivo da saída da fila"
+    )
 
     objects = ListaEsperaCirurgicaManager()
 
