@@ -25,6 +25,11 @@ from django.db.models.functions import TruncMonth
 from django.db.models import Count, Min
 from django import forms
 from django.shortcuts import redirect, render
+from django import forms
+from django.urls import path, reverse
+from django.http import HttpResponseRedirect
+from django.views.generic import FormView
+from unfold.views import UnfoldModelAdminViewMixin
 
 # Registro de usuário e grupo personalizados
 admin.site.unregister(User)
@@ -172,6 +177,54 @@ def add_campanha(modeladmin, request, queryset):
 def remove_campanha(modeladmin, request, queryset):
     queryset.update(campanha=False)
 
+class RemoverDaFilaForm(forms.Form):
+    motivo = forms.ChoiceField(
+        label="Selecione o motivo da remoção",
+        choices=ListaEsperaCirurgica.MOTIVO_SAIDA_CHOICES,
+        required=True,
+        widget=forms.Select(attrs={"class": "form-control"})
+    )
+
+class RemoverDaFilaView(UnfoldModelAdminViewMixin, FormView):
+    # Título que aparecerá no cabeçalho da página
+    title = "Remover Pacientes da Fila"
+    
+    # Permissão necessária para acessar esta view
+    permission_required = 'sua_app.change_listaesperacirurgica'
+    
+    # Template a ser renderizado
+    template_name = "admin/remover_da_fila.html"
+    
+    # Classe do formulário a ser utilizada
+    form_class = RemoverDaFilaForm
+
+    def get_context_data(self, **kwargs):
+        """Adiciona os pacientes selecionados ao contexto do template."""
+        context = super().get_context_data(**kwargs)
+        ids = self.request.GET.get('ids', '').split(',')
+        # Usa o queryset do model_admin para respeitar filtros, se houver
+        queryset = self.model_admin.get_queryset(self.request).filter(pk__in=ids)
+        context['pacientes'] = queryset
+        return context
+
+    def form_valid(self, form):
+        """Processa o formulário quando os dados são válidos."""
+        motivo = form.cleaned_data['motivo']
+        ids = self.request.GET.get('ids', '').split(',')
+        queryset = self.model_admin.get_queryset(self.request).filter(pk__in=ids)
+        
+        count = queryset.count()
+        queryset.update(ativo=False, motivo_saida=motivo)
+        
+        # Linha correta
+        self.model_admin.message_user(self.request, f"{count} pacientes removidos da fila com sucesso.", messages.SUCCESS)
+        
+        # Redireciona de volta para a lista de registros (changelist)
+        changelist_url = reverse(
+            f'admin:{self.model_admin.model._meta.app_label}_{self.model_admin.model._meta.model_name}_changelist'
+        )
+        return HttpResponseRedirect(changelist_url)
+
 @admin.register(ListaEsperaCirurgica)
 class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
     form = ListaEsperaCirurgicaForm
@@ -231,12 +284,24 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
     actions = ['remover_da_fila']
 
     def get_urls(self):
+        """Registra a URL da view customizada."""
         urls = super().get_urls()
+        
+        # O nome da URL é construído dinamicamente para evitar conflitos
+        url_name = f'{self.model._meta.app_label}_{self.model._meta.model_name}_remover_da_fila'
+
+        # Admin_view protege a view com as permissões do admin
+        custom_view = self.admin_site.admin_view(
+            RemoverDaFilaView.as_view(
+                model_admin=self # Passa a instância do admin para a view
+            )
+        )
+
         custom_urls = [
             path(
                 'remover-da-fila/',
-                self.admin_site.admin_view(self.remover_da_fila_view),
-                name='remover-da-fila',
+                custom_view,
+                name=url_name,
             ),
         ]
         return custom_urls + urls
@@ -247,23 +312,18 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
 
     remover_da_fila.short_description = "Remover da fila com justificativa"
 
-    def remover_da_fila_view(self, request):
-        ids = request.GET.get('ids', '').split(',')
-        queryset = ListaEsperaCirurgica.objects.filter(pk__in=ids)
+    @admin.action(description="Remover da fila com justificativa")
+    def remover_da_fila_action(self, request, queryset):
+        """Ação que coleta os IDs e redireciona para a view de remoção."""
+        selected_pks = queryset.values_list('pk', flat=True)
+        
+        # Usa 'reverse' para obter a URL de forma segura
+        url_name = f'admin:{self.model._meta.app_label}_{self.model._meta.model_name}_remover_da_fila'
+        redirect_url = reverse(url_name)
+        
+        # Adiciona os IDs como parâmetro na URL
+        return HttpResponseRedirect(f'{redirect_url}?ids={",".join(map(str, selected_pks))}')
 
-        if request.method == 'POST':
-            motivo = request.POST.get('motivo')
-            if not motivo:
-                messages.error(request, "Você deve selecionar um motivo.")
-            else:
-                queryset.update(ativo=False, motivo_saida=motivo)
-                self.message_user(request, f"{queryset.count()} pacientes removidos da fila.")
-                return redirect('..')  # volta pro changelist
-
-        return render(request, 'admin/remover_da_fila.html', {
-            'pacientes': queryset,
-            'motivos': ListaEsperaCirurgica.MOTIVO_SAIDA_CHOICES,
-        })
 
     @admin.display(description="Demanda Pedagógica", boolean=True)
     def demanda_pedagogica(self, obj):
