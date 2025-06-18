@@ -1,0 +1,139 @@
+{% extends "admin/change_form.html" %}
+
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+
+<script>
+const $ = django.jQuery;
+
+/**
+ * Aplica estilo visual ao campo personalizado (por classe no label).
+ * Adiciona classe base de estilo customizado, independentemente de ser obrigatório.
+ * @param {string} fieldSelector - O seletor jQuery do campo.
+ */
+function estilizarCustomField(fieldSelector) {
+    const $field = $(fieldSelector);
+    if ($field.length === 0) {
+        console.warn(`Campo ${fieldSelector} não encontrado.`);
+        return;
+    }
+
+    try {
+        const fieldName = fieldSelector.replace('#id_', '');
+        const $label = $field.closest(`.field-${fieldName}`).find('label');
+
+        $label.addClass('block font-semibold mb-2 text-font-important-light text-sm dark:text-font-important-dark');
+    } catch (e) {
+        console.error(`Erro ao aplicar estilo base ao label de ${fieldSelector}:`, e);
+    }
+}
+
+/**
+ * Aplica um asterisco ao label do campo, indicando que é obrigatório.
+ * @param {string} fieldSelector - O seletor jQuery do campo.
+ */
+function estilizarRequired(fieldSelector) {
+    const $field = $(fieldSelector);
+    if ($field.length === 0) return;
+
+    try {
+        const fieldName = fieldSelector.replace('#id_', '');
+        const $label = $field.closest(`.field-${fieldName}`).find('label');
+
+        if ($label.find('.text-red-600').length === 0) {
+            $label.append('<span class="text-red-600"> *</span>');
+        }
+    } catch (e) {
+        console.error(`Erro ao aplicar asterisco ao campo ${fieldSelector}:`, e);
+    }
+}
+
+/**
+ * Inicializa um campo Select2 com busca AJAX.
+ * @param {string} fieldSelector - O seletor jQuery do campo select.
+ * @param {string} ajaxUrl - URL da API de busca.
+ * @param {string} placeholder - Placeholder do campo.
+ * @param {boolean} isRequired - Se o campo é obrigatório.
+ */
+function estilizarSelect2(fieldSelector, ajaxUrl, placeholder, isRequired) {
+    const $field = $(fieldSelector);
+    if ($field.length === 0) {
+        console.warn(`Campo select2 ${fieldSelector} não encontrado.`);
+        return;
+    }
+
+    // Estiliza visualmente o campo e o label
+    estilizarCustomField(fieldSelector);
+    if (isRequired) {
+        estilizarRequired(fieldSelector);
+    }
+
+    if ($field.hasClass('select2-hidden-accessible')) {
+        $field.select2('destroy');
+    }
+
+    $field.select2({
+        ajax: {
+            url: ajaxUrl,
+            dataType: 'json',
+            delay: 250,
+            data: function(params) {
+                return {
+                    term: params.term,
+                    page: params.page
+                };
+            },
+            processResults: function(data, params) {
+                params.page = params.page || 1;
+                return {
+                    results: data.results,
+                    pagination: { more: data.pagination.more }
+                };
+            },
+        },
+        placeholder: placeholder,
+        minimumInputLength: 0,
+        theme: 'default',
+        width: '100%',
+        allowClear: !isRequired
+    });
+}
+
+// Quando o documento estiver pronto, inicializamos os campos
+$(document).ready(function() {
+    console.log("Inicializando campos autocomplete com estilo...");
+
+    estilizarSelect2(
+        '#id_procedimento_api_choice',
+        "{% url 'fila_cirurgica:procedimento_api_autocomplete' %}",
+        'Clique ou digite para buscar o Procedimento',
+        true
+    );
+
+    estilizarSelect2(
+        '#id_paciente_api_choice',
+        "{% url 'fila_cirurgica:paciente_api_autocomplete' %}",
+        'Clique ou digite para buscar o Paciente',
+        true
+    );
+
+    estilizarSelect2(
+        '#id_especialidade_api_choice',
+        "{% url 'fila_cirurgica:especialidade_api_autocomplete' %}",
+        'Clique ou digite para buscar a Especialidade',
+        true
+    );
+
+    estilizarSelect2(
+        '#id_medico_api_choice',
+        "{% url 'fila_cirurgica:medico_api_autocomplete' %}",
+        'Clique ou digite para buscar o Médico (opcional)',
+        true
+    );
+
+    // Campo de texto comum (não select), mas também estilizado
+    estilizarCustomField('#id_change_reason');
+    estilizarRequired('#id_change_reason');  // Se for obrigatório
+});
+</script>
+{% endblock %}

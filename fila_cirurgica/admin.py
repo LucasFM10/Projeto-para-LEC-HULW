@@ -10,12 +10,11 @@ from django.template.response import TemplateResponse
 from django.urls import path
 from django.http import JsonResponse
 from .models import (
-    Paciente,
     ListaEsperaCirurgica,
+    PacienteAghu,
     ProcedimentoAghu,
-    Especialidade,
-    Medico,
-    EspecialidadeProcedimento,
+    EspecialidadeAghu,
+    ProfissionalAghu,
     IndicadorEspecialidade,
 )
 from .forms import PacienteForm, ListaEsperaCirurgicaForm
@@ -30,6 +29,8 @@ from django.urls import path, reverse
 from django.http import HttpResponseRedirect
 from django.views.generic import FormView
 from unfold.views import UnfoldModelAdminViewMixin
+import requests
+from fila_cirurgica.views import API_BASE_URL
 
 # Registro de usuário e grupo personalizados
 admin.site.unregister(User)
@@ -135,10 +136,10 @@ class IndicadorEspecialidadeAdmin(admin.ModelAdmin):
         )
 
 
-@admin.register(Paciente)
+@admin.register(PacienteAghu)
 class PacienteAdmin(ModelAdmin):
     form = PacienteForm
-    list_display = ('nome', 'data_nascimento', 'sexo')
+    list_display = ('nome',)
     search_fields = ['nome']
 
     class Media:
@@ -146,28 +147,6 @@ class PacienteAdmin(ModelAdmin):
             "js/masks/jquery.mask.min.js",
             "js/masks/custom.js",
         )
-
-
-class DemandaPedagogicaFilter(SimpleListFilter):
-    title = 'Demanda Pedagógica'
-    parameter_name = 'demanda_pedagogica'
-
-    def lookups(self, request, model_admin):
-        return (
-            ('com', 'Com demanda'),
-            ('sem', 'Sem demanda'),
-        )
-
-    def queryset(self, request, queryset):
-        if self.value() == 'com':
-            return queryset.filter(
-                procedimento__especialidadeprocedimento__especialidade__demanda_pedagogica=True
-            ).distinct()
-        if self.value() == 'sem':
-            return queryset.exclude(
-                procedimento__especialidadeprocedimento__especialidade__demanda_pedagogica=True
-            ).distinct()
-        return queryset
     
 @admin.action(description="Inserir entrada em campanha")
 def add_campanha(modeladmin, request, queryset):
@@ -229,14 +208,12 @@ class RemoverDaFilaView(UnfoldModelAdminViewMixin, FormView):
 class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
     form = ListaEsperaCirurgicaForm
     readonly_fields = ['data_entrada']
-    autocomplete_fields = ['especialidade', 'procedimento', 'paciente', 'medico']
 
     list_display = (
         'get_posicao',
         'paciente',
         'prioridade',
         'medida_judicial',
-        'demanda_pedagogica',
         'especialidade',
         'procedimento',
     )
@@ -245,17 +222,13 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
         ('especialidade', AutocompleteSelectMultipleFilter),
         ('procedimento', AutocompleteSelectMultipleFilter),
         ('medico', AutocompleteSelectMultipleFilter),
-        (DemandaPedagogicaFilter)
     ]
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return (
             qs
-            .with_prioridade_index()        # já anota demanda_pedagogica_bool se você usou o Exists
             .order_by(
-                'prioridade_num',
-                'demanda_pedagogica_num',
                 'data_entrada'
             )
         )
@@ -274,99 +247,171 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
             "placeholder": "Motivo da alteração"
         })
         return form
+    
+    # Dentro da classe ListaEsperaCirurgicaAdmin em fila_cirurgica/admin.py
 
     def save_model(self, request, obj, form, change):
-        obj._change_reason = form.cleaned_data["change_reason"]
+        """
+        Sobrescreve o método de salvamento para processar os campos "fake" da API.
+        Esta versão explícita trata cada campo individualmente para clareza e correção.
+        """
+        API_BASE_URL = "http://127.0.0.1:8000/api/v1"
+        
+        try:
+            # --- 1. Processa o Paciente ---
+            paciente_prontuario = form.cleaned_data.get('paciente_api_choice')
+            if paciente_prontuario:
+                response = requests.get(f"{API_BASE_URL}/pacientes/{paciente_prontuario}")
+                response.raise_for_status()
+                data = response.json()
+                
+                paciente_obj, created = PacienteAghu.objects.get_or_create(
+                    prontuario=data['PRONTUARIO_PAC'],
+                    defaults={'nome': data['NOME_PACIENTE']}
+                )
+                # Atualiza o nome se ele mudou na API
+                if not created and paciente_obj.nome != data['NOME_PACIENTE']:
+                    paciente_obj.nome = data['NOME_PACIENTE']
+                    paciente_obj.save()
+                obj.paciente = paciente_obj
+            else:
+                obj.paciente = None
+
+            # --- 2. Processa o Procedimento ---
+            procedimento_codigo = form.cleaned_data.get('procedimento_api_choice')
+            if procedimento_codigo:
+                response = requests.get(f"{API_BASE_URL}/procedimentos/{procedimento_codigo}")
+                response.raise_for_status()
+                data = response.json()
+
+                procedimento_obj, created = ProcedimentoAghu.objects.get_or_create(
+                    codigo=data['COD_PROCEDIMENTO'],
+                    defaults={'nome': data['PROCEDIMENTO']}
+                )
+                if not created and procedimento_obj.nome != data['PROCEDIMENTO']:
+                    procedimento_obj.nome = data['PROCEDIMENTO']
+                    procedimento_obj.save()
+                obj.procedimento = procedimento_obj
+            else:
+                obj.procedimento = None
+
+            # --- 3. Processa a Especialidade ---
+            especialidade_cod = form.cleaned_data.get('especialidade_api_choice')
+            if especialidade_cod:
+                response = requests.get(f"{API_BASE_URL}/especialidades/{especialidade_cod}")
+                response.raise_for_status()
+                data = response.json()
+
+                # Note o uso de 'cod_especialidade' e 'nome_especialidade'
+                especialidade_obj, created = EspecialidadeAghu.objects.get_or_create(
+                    cod_especialidade=data['COD_ESPECIALIDADE'],
+                    defaults={'nome_especialidade': data['NOME_ESPECIALIDADE']}
+                )
+                if not created and especialidade_obj.nome_especialidade != data['NOME_ESPECIALIDADE']:
+                    especialidade_obj.nome_especialidade = data['NOME_ESPECIALIDADE']
+                    especialidade_obj.save()
+                obj.especialidade = especialidade_obj
+            else:
+                obj.especialidade = None
+
+            # --- 4. Processa o Médico (Profissional) ---
+            medico_matricula = form.cleaned_data.get('medico_api_choice')
+            if medico_matricula:
+                response = requests.get(f"{API_BASE_URL}/profissionais/{medico_matricula}")
+                response.raise_for_status()
+                data = response.json()
+
+                medico_obj, created = ProfissionalAghu.objects.get_or_create(
+                    matricula=data['MATRICULA'],
+                    defaults={'nome': data['NOME_PROFISSIONAL']}
+                )
+                if not created and medico_obj.nome != data['NOME_PROFISSIONAL']:
+                    medico_obj.nome = data['NOME_PROFISSIONAL']
+                    medico_obj.save()
+                obj.medico = medico_obj
+            else:
+                # Médico é opcional, então definimos como None se nada for selecionado
+                obj.medico = None
+
+        except requests.RequestException as e:
+            # Se qualquer chamada à API falhar, impede o salvamento e avisa o usuário.
+            self.message_user(request, f"ERRO CRÍTICO: Falha na comunicação com a API ({e}). O registro não foi salvo.", messages.ERROR)
+            return
+
+        # Finalmente, após processar todos os campos, salva o objeto principal.
         super().save_model(request, obj, form, change)
-
-    
-    list_display = ('paciente', 'procedimento', 'especialidade', 'ativo')
-    actions = ['remover_da_fila']
-
-    def get_urls(self):
-        """Registra a URL da view customizada."""
-        urls = super().get_urls()
         
-        # O nome da URL é construído dinamicamente para evitar conflitos
-        url_name = f'{self.model._meta.app_label}_{self.model._meta.model_name}_remover_da_fila'
+        list_display = ('paciente', 'procedimento', 'especialidade', 'ativo')
+        actions = ['remover_da_fila']
 
-        # Admin_view protege a view com as permissões do admin
-        custom_view = self.admin_site.admin_view(
-            RemoverDaFilaView.as_view(
-                model_admin=self # Passa a instância do admin para a view
+        def get_urls(self):
+            """Registra a URL da view customizada."""
+            urls = super().get_urls()
+            
+            # O nome da URL é construído dinamicamente para evitar conflitos
+            url_name = f'{self.model._meta.app_label}_{self.model._meta.model_name}_remover_da_fila'
+
+            # Admin_view protege a view com as permissões do admin
+            custom_view = self.admin_site.admin_view(
+                RemoverDaFilaView.as_view(
+                    model_admin=self # Passa a instância do admin para a view
+                )
             )
-        )
 
-        custom_urls = [
-            path(
-                'remover-da-fila/',
-                custom_view,
-                name=url_name,
-            ),
-        ]
-        return custom_urls + urls
+            custom_urls = [
+                path(
+                    'remover-da-fila/',
+                    custom_view,
+                    name=url_name,
+                ),
+            ]
+            return custom_urls + urls
 
-    def remover_da_fila(self, request, queryset):
-        selected = queryset.values_list('pk', flat=True)
-        return redirect(f'./remover-da-fila/?ids={",".join(str(pk) for pk in selected)}')
+        def remover_da_fila(self, request, queryset):
+            selected = queryset.values_list('pk', flat=True)
+            return redirect(f'./remover-da-fila/?ids={",".join(str(pk) for pk in selected)}')
 
-    remover_da_fila.short_description = "Remover da fila com justificativa"
+        remover_da_fila.short_description = "Remover da fila com justificativa"
 
-    @admin.action(description="Remover da fila com justificativa")
-    def remover_da_fila_action(self, request, queryset):
-        """Ação que coleta os IDs e redireciona para a view de remoção."""
-        selected_pks = queryset.values_list('pk', flat=True)
-        
-        # Usa 'reverse' para obter a URL de forma segura
-        url_name = f'admin:{self.model._meta.app_label}_{self.model._meta.model_name}_remover_da_fila'
-        redirect_url = reverse(url_name)
-        
-        # Adiciona os IDs como parâmetro na URL
-        return HttpResponseRedirect(f'{redirect_url}?ids={",".join(map(str, selected_pks))}')
+        @admin.action(description="Remover da fila com justificativa")
+        def remover_da_fila_action(self, request, queryset):
+            """Ação que coleta os IDs e redireciona para a view de remoção."""
+            selected_pks = queryset.values_list('pk', flat=True)
+            
+            # Usa 'reverse' para obter a URL de forma segura
+            url_name = f'admin:{self.model._meta.app_label}_{self.model._meta.model_name}_remover_da_fila'
+            redirect_url = reverse(url_name)
+            
+            # Adiciona os IDs como parâmetro na URL
+            return HttpResponseRedirect(f'{redirect_url}?ids={",".join(map(str, selected_pks))}')
 
+        @admin.display(description="Posição na Fila")
+        def get_posicao(self, obj):
+            return obj.get_posicao()
 
-    @admin.display(description="Demanda Pedagógica", boolean=True)
-    def demanda_pedagogica(self, obj):
-        # Se você anotou demanda_pedagogica_bool, pode fazer:
-        if hasattr(obj, 'demanda_pedagogica_bool'):
-            return obj.demanda_pedagogica_bool
+        @admin.display(description="Especialidade")
+        def especialidade(self, obj):
+            return obj.especialidade or "Sem Especialidade"
 
-    @admin.display(description="Posição na Fila")
-    def get_posicao(self, obj):
-        return obj.get_posicao()
-
-    @admin.display(description="Especialidade")
-    def especialidade(self, obj):
-        return obj.especialidade or "Sem Especialidade"
-
-    @admin.display(description="Procedimento Realizado")
-    def procedimento(self, obj):
-        return obj.procedimento
+        @admin.display(description="Procedimento Realizado")
+        def procedimento(self, obj):
+            return obj.procedimento
 
 @admin.register(ProcedimentoAghu)
 class ProcedimentoAdmin(ModelAdmin):
     search_fields = ['codigo', 'nome']
 
     def get_search_results(self, request, queryset, search_term):
-        queryset = queryset.filter(especialidadeprocedimento__isnull=False).distinct()
         return super().get_search_results(request, queryset, search_term)
 
 
-@admin.register(Especialidade)
+@admin.register(EspecialidadeAghu)
 class EspecialidadeAdmin(ModelAdmin):
     list_display = ('cod_especialidade', 'nome_especialidade')
     search_fields = ['nome_especialidade', 'cod_especialidade']
 
 
-@admin.register(Medico)
+@admin.register(ProfissionalAghu)
 class MedicoAdmin(ModelAdmin):
     list_display = ('nome', 'matricula')
-    autocomplete_fields = ['especialidades']
     search_fields = ['nome']
-
-
-@admin.register(EspecialidadeProcedimento)
-class EspecialidadeProcedimentoAdmin(ModelAdmin):
-    list_display = ('especialidade', 'procedimento')
-    autocomplete_fields = ['especialidade', 'procedimento']
-    search_fields = ['especialidade__nome_especialidade', 'procedimento__nome']
