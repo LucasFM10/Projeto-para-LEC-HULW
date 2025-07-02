@@ -91,7 +91,7 @@ class ListaEsperaCirurgica(models.Model):
         inherit=True,
         verbose_name=_("Histórico de Lista de Espera Cirúrgica"),
         history_change_reason_field=models.TextField(
-            null=True, blank=True, verbose_name=_("Motivo da alteração"))
+            null=True, blank=True, verbose_name=_("Motivo da alteraçãoxfcxdfs"))
     )
 
     PRIORIDADE_CHOICES = [

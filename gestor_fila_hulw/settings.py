@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from django.utils.translation import gettext_lazy as _
-
+from django.urls import reverse_lazy
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -28,11 +28,8 @@ SECRET_KEY = 'django-insecure-339&&s55h9xja8$*x@-p^j)%3hm4wo&=ms)q)1(de7)35zw*j+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "lec-hulw-6ad780eb7a1f.herokuapp.com"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
-UNFOLD = {
-    "SHOW_LANGUAGES": True,
-}
 
 # Application definition
 
@@ -40,11 +37,11 @@ INSTALLED_APPS = [
     'unfold',
     'unfold.contrib.forms',
     'unfold.contrib.filters',
-    "unfold.contrib.simple_history",
+    'unfold.contrib.simple_history',
+    
+    'simple_history',
 
     'fila_cirurgica',
-
-    'simple_history',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -67,14 +64,6 @@ MIDDLEWARE = [
 ]
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
-LANGUAGE_CODE = "pt"
-
-LANGUAGES = (
-    ("en", _("English")),
-    ("pt", _("Portuguese")),
-    ("de", _("German")),
-)
 
 ROOT_URLCONF = 'gestor_fila_hulw.urls'
 
@@ -124,28 +113,25 @@ DATABASES = {
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
+LANGUAGE_CODE = "pt-br"
+
+LANGUAGES = (
+    ("en", _("Inglês")),
+    ("pt-br", _("Português (Brasil)")),
+)
+
 TIME_ZONE = 'America/Sao_Paulo'
-
 USE_I18N = True
-
 USE_TZ = True
 
 
@@ -155,7 +141,97 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# UNFOLD CONFIGURATION
+# -----------------------------------------------------------------------------
+def environment_callback(request):
+    """
+    Função para exibir um indicador de ambiente (Desenvolvimento/Produção).
+    Retorna uma tupla com o texto e a cor. Cores disponíveis:
+    "info", "danger", "warning", "success"
+    """
+    if DEBUG:
+        return [_("Desenvolvimento"), "warning"]
+    return [_("Produção"), "success"]
+
+UNFOLD = {
+    # --- Identidade do Site ---
+    "SITE_TITLE": "Gestor de Fila Cirúrgica",
+    "SITE_HEADER": "Gestor de Fila - HULW",
+    "SITE_URL": reverse_lazy("admin:index"),
+    # "SITE_SYMBOL": "health_and_safety",  # Ícone do Google Fonts
+    "SITE_SYMBOL": "assignment_add",
+
+    # --- Logo e Favicon (descomente e adicione seus arquivos em 'static/') ---
+    # "SITE_LOGO": {
+    #     "light": lambda request: static("logo-light.svg"),
+    #     "dark": lambda request: static("logo-dark.svg"),
+    # },
+    # "SITE_FAVICONS": [
+    #     {
+    #         "rel": "icon",
+    #         "sizes": "32x32",
+    #         "type": "image/svg+xml",
+    #         "href": lambda request: static("favicon.svg"),
+    #     },
+    # ],
+
+    # --- Funcionalidades e Aparência ---
+    "SHOW_HISTORY": True,  # Mostra o botão "Histórico" (requer simple_history)
+    "SHOW_VIEW_ON_SITE": False,  # Esconde o botão "Ver no site"
+    "ENVIRONMENT": environment_callback, # Mostra o ambiente atual (Dev/Prod)
+    "SHOW_LANGUAGES": True, # Mostra o seletor de idiomas
+
+    # --- Barra Lateral (Sidebar) ---
+    "SIDEBAR": {
+        "show_search": True,  # Habilita a busca na barra lateral
+        "show_all_applications": True, # Mostra todas as apps em um dropdown
+        "navigation": [
+            {
+                "title": _("Navegação"),
+                "items": [
+                    {
+                        "title": _("Dashboard"),
+                        "icon": "dashboard",
+                        "link": reverse_lazy("admin:index"),
+                    },
+                    {
+                        "title": _("Fila Cirúrgica"),
+                        "icon": "medication", # Ícone para a app principal
+                        "link": reverse_lazy("admin:app_list", kwargs={"app_label": "fila_cirurgica"}),
+                    },
+                ],
+            },
+            {
+                "title": _("Administração"),
+                "separator": True,
+                "items": [
+                    {
+                        "title": _("Usuários"),
+                        "icon": "people",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                    },
+                    {
+                        "title": _("Grupos"),
+                        "icon": "group",
+                        "link": reverse_lazy("admin:auth_group_changelist"),
+                    },
+                ],
+            },
+        ],
+    },
+
+    # --- Estilos e Scripts Personalizados (descomente para usar) ---
+    # "STYLES": [
+    #     lambda request: static("css/custom_admin.css"),
+    # ],
+    # "SCRIPTS": [
+    #     lambda request: static("js/custom_admin.js"),
+    # ],
+}

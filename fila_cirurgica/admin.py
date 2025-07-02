@@ -341,61 +341,61 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
         # Finalmente, após processar todos os campos, salva o objeto principal.
         super().save_model(request, obj, form, change)
         
-        list_display = ('paciente', 'procedimento', 'especialidade', 'ativo')
-        actions = ['remover_da_fila']
+    list_display = ('paciente', 'procedimento', 'especialidade', 'ativo')
+    actions = ['remover_da_fila']
 
-        def get_urls(self):
-            """Registra a URL da view customizada."""
-            urls = super().get_urls()
-            
-            # O nome da URL é construído dinamicamente para evitar conflitos
-            url_name = f'{self.model._meta.app_label}_{self.model._meta.model_name}_remover_da_fila'
+    def get_urls(self):
+        """Registra a URL da view customizada."""
+        urls = super().get_urls()
+        
+        # O nome da URL é construído dinamicamente para evitar conflitos
+        url_name = f'{self.model._meta.app_label}_{self.model._meta.model_name}_remover_da_fila'
 
-            # Admin_view protege a view com as permissões do admin
-            custom_view = self.admin_site.admin_view(
-                RemoverDaFilaView.as_view(
-                    model_admin=self # Passa a instância do admin para a view
-                )
+        # Admin_view protege a view com as permissões do admin
+        custom_view = self.admin_site.admin_view(
+            RemoverDaFilaView.as_view(
+                model_admin=self # Passa a instância do admin para a view
             )
+        )
 
-            custom_urls = [
-                path(
-                    'remover-da-fila/',
-                    custom_view,
-                    name=url_name,
-                ),
-            ]
-            return custom_urls + urls
+        custom_urls = [
+            path(
+                'remover-da-fila/',
+                custom_view,
+                name=url_name,
+            ),
+        ]
+        return custom_urls + urls
 
-        def remover_da_fila(self, request, queryset):
-            selected = queryset.values_list('pk', flat=True)
-            return redirect(f'./remover-da-fila/?ids={",".join(str(pk) for pk in selected)}')
+    def remover_da_fila(self, request, queryset):
+        selected = queryset.values_list('pk', flat=True)
+        return redirect(f'./remover-da-fila/?ids={",".join(str(pk) for pk in selected)}')
 
-        remover_da_fila.short_description = "Remover da fila com justificativa"
+    remover_da_fila.short_description = "Remover da fila com justificativa"
 
-        @admin.action(description="Remover da fila com justificativa")
-        def remover_da_fila_action(self, request, queryset):
-            """Ação que coleta os IDs e redireciona para a view de remoção."""
-            selected_pks = queryset.values_list('pk', flat=True)
-            
-            # Usa 'reverse' para obter a URL de forma segura
-            url_name = f'admin:{self.model._meta.app_label}_{self.model._meta.model_name}_remover_da_fila'
-            redirect_url = reverse(url_name)
-            
-            # Adiciona os IDs como parâmetro na URL
-            return HttpResponseRedirect(f'{redirect_url}?ids={",".join(map(str, selected_pks))}')
+    @admin.action(description="Remover da fila com justificativa")
+    def remover_da_fila_action(self, request, queryset):
+        """Ação que coleta os IDs e redireciona para a view de remoção."""
+        selected_pks = queryset.values_list('pk', flat=True)
+        
+        # Usa 'reverse' para obter a URL de forma segura
+        url_name = f'admin:{self.model._meta.app_label}_{self.model._meta.model_name}_remover_da_fila'
+        redirect_url = reverse(url_name)
+        
+        # Adiciona os IDs como parâmetro na URL
+        return HttpResponseRedirect(f'{redirect_url}?ids={",".join(map(str, selected_pks))}')
 
-        @admin.display(description="Posição na Fila")
-        def get_posicao(self, obj):
-            return obj.get_posicao()
+    @admin.display(description="Posição na Fila")
+    def get_posicao(self, obj):
+        return obj.get_posicao()
 
-        @admin.display(description="Especialidade")
-        def especialidade(self, obj):
-            return obj.especialidade or "Sem Especialidade"
+    @admin.display(description="Especialidade")
+    def especialidade(self, obj):
+        return obj.especialidade or "Sem Especialidade"
 
-        @admin.display(description="Procedimento Realizado")
-        def procedimento(self, obj):
-            return obj.procedimento
+    @admin.display(description="Procedimento Realizado")
+    def procedimento(self, obj):
+        return obj.procedimento
 
 @admin.register(ProcedimentoAghu)
 class ProcedimentoAdmin(ModelAdmin):
