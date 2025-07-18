@@ -1,94 +1,69 @@
 {% extends "admin/change_form.html" %}
-
+{% block extrahead %}
+{{ block.super }}
+<style>
+    /* Este bloco de CSS personaliza a aparência do campo Select2 QUANDO ele está desabilitado.
+      Ele usa as classes do seu tema (bg-base-50, border, shadow-sm, etc.) para que o estilo
+      fique idêntico aos seus outros campos "readonly".
+    */
+    .select2-container--default.select2-container--disabled .select2-selection--single {
+        background-color: #f9fafb; /* Equivalente a bg-base-50 ou bg-gray-50 */
+        border: 1px solid #e5e7eb;  /* Equivalente a border e border-gray-200 */
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* Equivalente a shadow-sm */
+        cursor: not-allowed;
+    }
+    /* Versão para o modo escuro (dark mode) */
+    .dark .select2-container--default.select2-container--disabled .select2-selection--single {
+        background-color: #1f2937; /* Equivalente a dark:bg-base-800 */
+        border: 1px solid #374151;  /* Equivalente a dark:border-base-700 */
+    }
+    /* Estiliza o texto do placeholder quando desabilitado */
+    .select2-container--default.select2-container--disabled .select2-selection--single .select2-selection__rendered {
+        color: #6b7280; /* Um tom de cinza para o texto */
+    }
+</style>
+{% endblock %}
 {% block admin_change_form_document_ready %}
 {{ block.super }}
-
 <script>
 const $ = django.jQuery;
 
-/**
- * Aplica estilo visual ao campo personalizado (por classe no label).
- * Adiciona classe base de estilo customizado, independentemente de ser obrigatório.
- * @param {string} fieldSelector - O seletor jQuery do campo.
- */
 function estilizarCustomField(fieldSelector) {
     const $field = $(fieldSelector);
-    if ($field.length === 0) {
-        console.warn(`Campo ${fieldSelector} não encontrado.`);
-        return;
-    }
-
+    if ($field.length === 0) { return; }
     try {
         const fieldName = fieldSelector.replace('#id_', '');
-        const $label = $field.closest(`.field-${fieldName}`).find('label');
-
-        $label.addClass('block font-semibold mb-2 text-font-important-light text-sm dark:text-font-important-dark');
-    } catch (e) {
-        console.error(`Erro ao aplicar estilo base ao label de ${fieldSelector}:`, e);
-    }
+        $field.closest(`.field-${fieldName}`).find('label').addClass('block font-semibold mb-2 text-font-important-light text-sm dark:text-font-important-dark');
+    } catch (e) { console.error(`Erro ao aplicar estilo base ao label de ${fieldSelector}:`, e); }
 }
 
-/**
- * Aplica um asterisco ao label do campo, indicando que é obrigatório.
- * @param {string} fieldSelector - O seletor jQuery do campo.
- */
 function estilizarRequired(fieldSelector) {
     const $field = $(fieldSelector);
     if ($field.length === 0) return;
-
     try {
         const fieldName = fieldSelector.replace('#id_', '');
         const $label = $field.closest(`.field-${fieldName}`).find('label');
-
         if ($label.find('.text-red-600').length === 0) {
             $label.append('<span class="text-red-600"> *</span>');
         }
-    } catch (e) {
-        console.error(`Erro ao aplicar asterisco ao campo ${fieldSelector}:`, e);
-    }
+    } catch (e) { console.error(`Erro ao aplicar asterisco ao campo ${fieldSelector}:`, e); }
 }
 
-/**
- * Inicializa um campo Select2 com busca AJAX.
- * @param {string} fieldSelector - O seletor jQuery do campo select.
- * @param {string} ajaxUrl - URL da API de busca.
- * @param {string} placeholder - Placeholder do campo.
- * @param {boolean} isRequired - Se o campo é obrigatório.
- */
 function estilizarSelect2(fieldSelector, ajaxUrl, placeholder, isRequired) {
     const $field = $(fieldSelector);
-    if ($field.length === 0) {
-        console.warn(`Campo select2 ${fieldSelector} não encontrado.`);
-        return;
-    }
-
-    // Estiliza visualmente o campo e o label
+    if ($field.length === 0) { return; }
     estilizarCustomField(fieldSelector);
-    if (isRequired) {
-        estilizarRequired(fieldSelector);
-    }
-
-    if ($field.hasClass('select2-hidden-accessible')) {
-        $field.select2('destroy');
-    }
-
+    if (isRequired) { estilizarRequired(fieldSelector); }
+    if ($field.hasClass('select2-hidden-accessible')) { $field.select2('destroy'); }
     $field.select2({
         ajax: {
             url: ajaxUrl,
             dataType: 'json',
             delay: 250,
-            data: function(params) {
-                return {
-                    term: params.term,
-                    page: params.page
-                };
-            },
-            processResults: function(data, params) {
+            data: params => ({ term: params.term, page: params.page }),
+            processResults: (data, params) => {
                 params.page = params.page || 1;
-                return {
-                    results: data.results,
-                    pagination: { more: data.pagination.more }
-                };
+                return { results: data.results, pagination: { more: data.pagination.more } };
             },
         },
         placeholder: placeholder,
@@ -99,41 +74,55 @@ function estilizarSelect2(fieldSelector, ajaxUrl, placeholder, isRequired) {
     });
 }
 
-// Quando o documento estiver pronto, inicializamos os campos
 $(document).ready(function() {
-    console.log("Inicializando campos autocomplete com estilo...");
+    console.log("Inicializando campos com dependência...");
 
+    // --- INICIALIZAÇÃO DOS CAMPOS ---
+    // Campos independentes
+    estilizarSelect2('#id_paciente_api_choice', "{% url 'fila_cirurgica:paciente_api_autocomplete' %}", 'Clique ou digite para buscar o Paciente', true);
+    estilizarSelect2('#id_especialidade_api_choice', "{% url 'fila_cirurgica:especialidade_api_autocomplete' %}", '1º: Busque a Especialidade', true);
+    estilizarSelect2('#id_medico_api_choice', "{% url 'fila_cirurgica:medico_api_autocomplete' %}", 'Clique ou digite para buscar o Médico (opcional)', false);
+    estilizarCustomField('#id_change_reason');
+    estilizarRequired('#id_change_reason');
+
+    // Campo Procedimento (dependente da Especialidade)
+    const $especialidadeField = $('#id_especialidade_api_choice');
+    const $procedimentoField = $('#id_procedimento_api_choice');
+    const procedimentoAutocompleteUrl = "{% url 'fila_cirurgica:procedimento_api_autocomplete' %}"; // URL fixa
+
+    // Inicializa o campo de procedimento
     estilizarSelect2(
         '#id_procedimento_api_choice',
-        "{% url 'fila_cirurgica:procedimento_api_autocomplete' %}",
-        'Clique ou digite para buscar o Procedimento',
+        procedimentoAutocompleteUrl,
+        'Selecione uma especialidade primeiro',
         true
     );
 
-    estilizarSelect2(
-        '#id_paciente_api_choice',
-        "{% url 'fila_cirurgica:paciente_api_autocomplete' %}",
-        'Clique ou digite para buscar o Paciente',
-        true
-    );
+    // Função para gerenciar o estado do campo de procedimento
+    function gerenciarEstadoProcedimento() {
+        const especialidadeSelecionada = $especialidadeField.val();
 
-    estilizarSelect2(
-        '#id_especialidade_api_choice',
-        "{% url 'fila_cirurgica:especialidade_api_autocomplete' %}",
-        'Clique ou digite para buscar a Especialidade',
-        true
-    );
+        if (especialidadeSelecionada) {
+            // Se uma especialidade foi selecionada, habilita o campo de procedimento
+            $procedimentoField.prop('disabled', false);
+            // Atualiza o placeholder para indicar que agora pode buscar
+            $procedimentoField.data('select2').options.options.placeholder = '2º: Agora, busque o Procedimento';
+        } else {
+            // Se nenhuma especialidade foi selecionada, desabilita e limpa o campo de procedimento
+            $procedimentoField.val(null).trigger('change'); // Limpa a seleção
+            $procedimentoField.prop('disabled', true);
+            // Atualiza o placeholder para indicar que a especialidade é necessária
+            $procedimentoField.data('select2').options.options.placeholder = 'Selecione uma especialidade primeiro';
+        }
+        // Garante que o Select2 reflita as mudanças de estado
+        $procedimentoField.trigger('change.select2');
+    }
 
-    estilizarSelect2(
-        '#id_medico_api_choice',
-        "{% url 'fila_cirurgica:medico_api_autocomplete' %}",
-        'Clique ou digite para buscar o Médico (opcional)',
-        true
-    );
+    // Define o estado inicial do campo ao carregar a página
+    gerenciarEstadoProcedimento();
 
-    // Campo de texto comum (não select), mas também estilizado
-    estilizarCustomField('#id_change_reason');
-    estilizarRequired('#id_change_reason');  // Se for obrigatório
+    // Adiciona o gatilho para futuras mudanças na especialidade
+    $especialidadeField.on('change', gerenciarEstadoProcedimento);
 });
 </script>
 {% endblock %}

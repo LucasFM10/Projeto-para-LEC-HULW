@@ -39,7 +39,8 @@ class ListaEsperaCirurgicaForm(forms.ModelForm):
             'data-ajax-url': reverse_lazy('fila_cirurgica:procedimento_api_autocomplete'),
             'data-theme': 'admin-autocomplete', 'data-allow-clear': 'false',
             'data-placeholder': 'Busque o procedimento',
-        })
+        }),
+        help_text="Selecione a especialidade antes de selecionar o procedimento."
     )
     # --- Campo "Fake" para Paciente ---
     paciente_api_choice = RawChoiceField(
