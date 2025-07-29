@@ -1,0 +1,9 @@
+admin:
+
+user: admin
+password: admin
+
+operador:
+
+user: pedro_operador
+password: senha###

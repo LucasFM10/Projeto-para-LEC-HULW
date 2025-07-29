@@ -30,6 +30,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
+SIMPLE_HISTORY_REVERT_DISABLED = True
 
 # Application definition
 
@@ -52,6 +53,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'simple_history.middleware.HistoryRequestMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -125,6 +127,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "pt-br"
 
+LOCALE_PATHS = [BASE_DIR / 'locale']
+
 LANGUAGES = (
     ("en", _("Inglês")),
     ("pt-br", _("Português (Brasil)")),
@@ -192,39 +196,6 @@ UNFOLD = {
     "SIDEBAR": {
         "show_search": True,  # Habilita a busca na barra lateral
         "show_all_applications": True, # Mostra todas as apps em um dropdown
-        "navigation": [
-            {
-                "title": _("Navegação"),
-                "items": [
-                    {
-                        "title": _("Dashboard"),
-                        "icon": "dashboard",
-                        "link": reverse_lazy("admin:index"),
-                    },
-                    {
-                        "title": _("Fila Cirúrgica"),
-                        "icon": "medication", # Ícone para a app principal
-                        "link": reverse_lazy("admin:app_list", kwargs={"app_label": "fila_cirurgica"}),
-                    },
-                ],
-            },
-            {
-                "title": _("Administração"),
-                "separator": True,
-                "items": [
-                    {
-                        "title": _("Usuários"),
-                        "icon": "people",
-                        "link": reverse_lazy("admin:auth_user_changelist"),
-                    },
-                    {
-                        "title": _("Grupos"),
-                        "icon": "group",
-                        "link": reverse_lazy("admin:auth_group_changelist"),
-                    },
-                ],
-            },
-        ],
     },
 
     # --- Estilos e Scripts Personalizados (descomente para usar) ---

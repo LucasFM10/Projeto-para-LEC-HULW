@@ -81,7 +81,7 @@ $(document).ready(function() {
     // Campos independentes
     estilizarSelect2('#id_paciente_api_choice', "{% url 'fila_cirurgica:paciente_api_autocomplete' %}", 'Clique ou digite para buscar o Paciente', true);
     estilizarSelect2('#id_especialidade_api_choice', "{% url 'fila_cirurgica:especialidade_api_autocomplete' %}", '1º: Busque a Especialidade', true);
-    estilizarSelect2('#id_medico_api_choice', "{% url 'fila_cirurgica:medico_api_autocomplete' %}", 'Clique ou digite para buscar o Médico (opcional)', false);
+    estilizarSelect2('#id_medico_api_choice', "{% url 'fila_cirurgica:medico_api_autocomplete' %}", 'Clique ou digite para buscar o médico (opcional)', false);
     estilizarCustomField('#id_change_reason');
     estilizarRequired('#id_change_reason');
 

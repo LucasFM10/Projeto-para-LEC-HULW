@@ -1,0 +1,27 @@
+{% extends "simple_history/object_history.html" %}
+{% load i18n %}
+
+{% block content %}
+    {{ block.super }}
+    <script>
+        (function waitForJQuery(retries = 10) {
+          if (typeof django === 'undefined' || typeof django.jQuery === 'undefined') {
+            if (retries <= 0) return;
+            return setTimeout(() => waitForJQuery(retries - 1), 100);
+          }
+          const $ = django.jQuery;
+          $(document).ready(function() {
+            window.alert("construto carregado");
+            $('#change-history th').each(function() {
+              const texto = $(this).text().trim();
+              if (texto === "Change reason") {
+                $(this).text("Motivo da alteração");
+              } else if (texto === "Changes") {
+                $(this).text("Alterações");
+              }
+            });
+          });
+        })();
+      </script>
+
+{% endblock %}

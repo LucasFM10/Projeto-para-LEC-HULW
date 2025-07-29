@@ -4,10 +4,6 @@
 
   $.fn.djangoCustomSelect2 = function () {
     $.each(this, function (i, element) {
-      if (element.id.match(/__prefix__/)) {
-        return;
-      }
-
       $(element).select2();
     });
 

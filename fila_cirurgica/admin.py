@@ -17,6 +17,7 @@ from .models import (
     ProfissionalAghu,
     IndicadorEspecialidade,
 )
+from django.utils.html import format_html
 from .forms import PacienteForm, ListaEsperaCirurgicaForm
 from django.utils.timezone import now
 from datetime import timedelta
@@ -31,6 +32,7 @@ from django.views.generic import FormView
 from unfold.views import UnfoldModelAdminViewMixin
 import requests
 from fila_cirurgica.views import API_BASE_URL
+from simple_history.utils import update_change_reason
 
 # Registro de usuário e grupo personalizados
 admin.site.unregister(User)
@@ -208,6 +210,7 @@ class RemoverDaFilaView(UnfoldModelAdminViewMixin, FormView):
 class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
     form = ListaEsperaCirurgicaForm
     readonly_fields = ['data_entrada']
+    object_history_template = 'admin/simple_history/listaesperacirurgica_object_history.html'
 
     list_display = (
         'get_posicao',
@@ -340,8 +343,30 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
 
         # Finalmente, após processar todos os campos, salva o objeto principal.
         super().save_model(request, obj, form, change)
+
         
-    list_display = ('paciente', 'procedimento', 'especialidade', 'ativo')
+        update_change_reason(obj, form.cleaned_data.get('change_reason', ''))
+        # Salva o objeto principal após processar todos os campos.
+
+    def ativo_personalizado(self, obj):
+        if obj.ativo:
+            return format_html('''
+                <div class="flex items-center ">
+                    <div class="block mr-3 outline rounded-full ml-1 h-1 w-1 bg-green-500 outline-green-200 dark:outline-green-500/20"></div>
+                    <span>Sim</span>
+                </div>
+            ''')
+        else:
+            return format_html('''
+                <div class="flex items-center ">
+                    <div class="block mr-3 outline rounded-full ml-1 h-1 w-1 bg-red-500 outline-red-200 dark:outline-red-500/20"></div>
+                    <span>Não</span>
+                </div>
+            ''')
+    ativo_personalizado.short_description = 'Está ativo na fila?'
+    ativo_personalizado.admin_order_field = 'ativo'
+        
+    list_display = ('paciente', 'procedimento', 'especialidade', 'ativo_personalizado')
     actions = ['remover_da_fila']
 
     def get_urls(self):

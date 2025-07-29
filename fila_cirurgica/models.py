@@ -50,11 +50,11 @@ class ProfissionalAghu(models.Model):
     nome = models.CharField(max_length=255)
 
     def __str__(self):
-        return f"{self.nome} ({self.prontuario})"
+        return f"{self.nome} (Matrícula: {self.matricula})"
 
     class Meta:
-        verbose_name = "Médico"
-        verbose_name_plural = "Médicos"
+        verbose_name = "médico"
+        verbose_name_plural = "médicos"
 
 
 class ListaEsperaCirurgicaQuerySet(models.QuerySet):
@@ -87,12 +87,7 @@ class ListaEsperaCirurgicaManager(models.Manager):
 
 
 class ListaEsperaCirurgica(models.Model):
-    history = HistoricalRecords(
-        inherit=True,
-        verbose_name=_("Histórico de Lista de Espera Cirúrgica"),
-        history_change_reason_field=models.TextField(
-            null=True, blank=True, verbose_name=_("Motivo da alteraçãoxfcxdfs"))
-    )
+    history = HistoricalRecords()
 
     PRIORIDADE_CHOICES = [
         ('ONC', 'Paciente Oncológico'),
@@ -117,7 +112,7 @@ class ListaEsperaCirurgica(models.Model):
         ProcedimentoAghu, on_delete=models.CASCADE)
     especialidade = models.ForeignKey(EspecialidadeAghu, on_delete=models.CASCADE)
     medico = models.ForeignKey(
-        ProfissionalAghu, on_delete=models.CASCADE, blank=True, null=True, verbose_name="Médico")
+        ProfissionalAghu, on_delete=models.CASCADE, blank=True, null=True, verbose_name="médico")
     data_entrada = models.DateTimeField(auto_now_add=True)
     prioridade = models.CharField(
         max_length=3, choices=PRIORIDADE_CHOICES, default='SEM')
