@@ -1,9 +1,11 @@
 {% extends "unfold/layouts/base_simple.html" %}
+{% load i18n %}
 
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="p-6">  <div class="mb-6">
+<div class="p-6">  
+    <div class="mb-6">
         <h1 class="text-xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">
             {{ title }}
         </h1>
@@ -12,42 +14,62 @@
         </p>
     </div>
 
-    <div class="bg-white rounded-md shadow-sm ring-1 ring-base-200/50 dark:bg-base-800 dark:ring-base-700/50">
-        <form method="post" novalidate>
+    <div class="border border-base-200 rounded shadow-sm dark:border-base-800">
+        
+        <p class="font-semibold p-4 text-font-important-light dark:text-font-important-dark">
+            {% blocktranslate with title=title %}Tem certeza que quer prosseguir com a remoção de pacientes da fila?{% endblocktranslate %}
+        </p>
+
+        <div class="border-base-200 border-t p-4 dark:border-base-800">
+            <h2 class="font-semibold mb-2 text-font-important-light dark:text-font-important-dark">
+                Paciente(s) a ser(em) removido(s):
+            </h2>
+            <ul class="leading-relaxed text-sm">
+                {% for paciente in pacientes %}
+                    <li>{{ paciente.paciente }} (Procedimento: {{ paciente.procedimento }})</li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <form method="post" novalidate> {# Removido o border-t e px-4 py-3 do form, pois a div interna já tem #}
             {% csrf_token %}
             
-            <div class="p-6">
+            <div class="p-6"> {# Este div pode ser usado para o padding interno do conteúdo do form #}
                 <div class="space-y-6">
-                    <div>
-                        <p class="font-medium text-gray-800 dark:text-gray-200">
-                            Paciente(s) a ser(em) removido(s):
-                        </p>
-                        <ul class="mt-2 text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
-                            {% for paciente in pacientes %}
-                                <li>{{ paciente.paciente }} (Procedimento: {{ paciente.procedimento }})</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
+                    {# Campo de formulário 'motivo' #}
+                    <div class="flex-grow group/line field-motivo flex-col p-3 field-line flex">
+                        <div class="">
+                            <label class="block font-semibold mb-2 text-font-important-light text-sm dark:text-font-important-dark required" for="{{ form.motivo.id_for_label }}">
+                                {{ form.motivo.label }} 
+                                {% if form.motivo.field.required %}
+                                    <span class="text-red-600">*</span>
+                                {% endif %}
+                            </label>
+                        </div>
 
-                    <div>
-                        {{ form.motivo.label_tag }}
-                        {{ form.motivo }}
-                        {% if form.motivo.errors %}
-                            <p class="mt-2 text-sm text-red-600 dark:text-red-500">{{ form.motivo.errors|first }}</p>
-                        {% endif %}
+                        <div class="flex-grow">
+                            {{ form.motivo }}
+                            
+                            {% if form.motivo.errors %}
+                                <p class="mt-2 text-sm text-red-600 dark:text-red-500">{{ form.motivo.errors|first }}</p>
+                            {% endif %}
+                            {% if form.motivo.help_text %}
+                                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ form.motivo.help_text }}</p>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="px-6 py-4 bg-base-50 rounded-b-md border-t border-base-200 ">
+            {# Barra de Botões - As classes já estavam corretas aqui #}
+            <div class="px-6 py-4 rounded-b-md border-t border-base-200 dark:border-base-800">
                 <div class="flex items-center justify-end space-x-3">
-                    
-                    <a href=".." class="bg-primary-600 block border border-transparent font-medium px-3 py-2 rounded text-center text-white w-full lg:w-auto hover:bg-primary-700 transition-colors">
+                    <a href=".." class="border cancel-link flex items-center justify-center font-medium px-3 py-2 rounded w-full hover:bg-base-50 lg:block lg:mb-0 lg:w-auto dark:border-base-700 dark:text-font-default-dark dark:hover:text-base-200 dark:hover:bg-base-900">
                         Cancelar
                     </a>
                     
-                    <button type="submit" class="bg-red-600 flex items-center justify-center font-medium h-9.5 px-3 py-2 rounded text-center text-white w-full lg:w-auto hover:bg-red-700 transition-colors dark:bg-red-500/20 dark:text-red-500 dark:hover:bg-red-500/30">
-                        Confirmar Remoção
+                    <button type="submit" class="bg-red-600 cursor-pointer flex items-center justify-center font-medium h-9.5 ml-0 px-3 py-2 rounded w-full lg:ml-auto lg:w-auto dark:bg-red-500/20 dark:text-red-500 dark:hover:bg-red-500/30">
+                        Sim, eu tenho certeza
                     </button>
             
                 </div>

@@ -1,30 +1,15 @@
 from django import forms
-from .models import ListaEsperaCirurgica, ProcedimentoAghu, PacienteAghu, ProfissionalAghu, EspecialidadeAghu
+from .models import ListaEsperaCirurgica
 from django.urls import reverse_lazy
 
-class PacienteForm(forms.ModelForm):
-    class Meta:
-        model = PacienteAghu
-        fields = [
-            'prontuario',
-            'nome',
-        ]
-
-    # def clean_telefone_contato_principal(self):
-    #     telefone = self.cleaned_data.get('telefone_contato_principal')
-    #     if telefone and not telefone.isdigit():
-    #         raise forms.ValidationError('Preencha o telefone apenas com números.')
-    #     return telefone
-
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     for field in ['telefone_contato_principal', 'telefone_contato_secundario']:
-    #         widget = self.fields[field].widget
-    #         widget.attrs.update({
-    #             'placeholder': 'Ex.: XX X XXXX - XXXX',
-    #             'class': widget.attrs.get('class', '') + ' mask-telefone'
-    #         })
-
+# forms.py
+class RemoverDaFilaForm(forms.Form):
+    motivo = forms.ChoiceField(
+        label="Selecione o motivo da remoção",
+        choices=ListaEsperaCirurgica.MOTIVO_SAIDA_CHOICES,
+        required=True,
+        widget=forms.Select(attrs={"class": "form-control", "required": "required"})
+    )
 
 class ListaEsperaCirurgicaForm(forms.ModelForm):
 
@@ -90,7 +75,8 @@ class ListaEsperaCirurgicaForm(forms.ModelForm):
             'situacao',
             'observacoes',
             'data_novo_contato',
-            'change_reason'
+            'change_reason',
+            'ativo',
         ]
 
     def __init__(self, *args, **kwargs):

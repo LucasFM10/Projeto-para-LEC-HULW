@@ -1,15 +1,20 @@
 # models.py
 from django.db import models
-from django.db.models import Case, When, IntegerField, Exists, OuterRef
-from django.core.exceptions import ValidationError
+from django.db.models import Case, When, IntegerField
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
 
 
 class PacienteAghu(models.Model):
     prontuario = models.CharField(
-        max_length=20, unique=True, verbose_name="Prontuário do Paciente")
-    nome = models.CharField(max_length=255, verbose_name="Nome do Paciente")
+        max_length=20,
+        unique=True,
+        verbose_name="Prontuário do Paciente"
+        )
+    nome = models.CharField(
+        max_length=255,
+        verbose_name="Nome do Paciente"
+        )
 
     def __str__(self):
         return f"{self.nome} ({self.prontuario})"
@@ -21,9 +26,14 @@ class PacienteAghu(models.Model):
 
 class ProcedimentoAghu(models.Model):
     codigo = models.CharField(
-        max_length=20, unique=True, verbose_name="Código do Procedimento")
+        max_length=20,
+        unique=True,
+        verbose_name="Código do Procedimento"
+        )
     nome = models.CharField(
-        max_length=255, verbose_name="Nome do Procedimento")
+        max_length=255,
+        verbose_name="Nome do Procedimento"
+        )
 
     def __str__(self):
         return f"{self.codigo} - {self.nome}"
@@ -34,8 +44,15 @@ class ProcedimentoAghu(models.Model):
 
 
 class EspecialidadeAghu(models.Model):
-    cod_especialidade = models.CharField(max_length=10, unique=True)
-    nome_especialidade = models.CharField(max_length=255)
+    cod_especialidade = models.CharField(
+        max_length=10,
+        unique=True,
+        verbose_name="Código da Especialidade"
+        )
+    nome_especialidade = models.CharField(
+        max_length=255,
+        verbose_name="Nome da Especialidade"
+        )
 
     def __str__(self):
         return self.nome_especialidade
@@ -46,15 +63,22 @@ class EspecialidadeAghu(models.Model):
 
 
 class ProfissionalAghu(models.Model):
-    matricula = models.CharField(max_length=10, unique=True)
-    nome = models.CharField(max_length=255)
+    matricula = models.CharField(
+        max_length=10,
+        unique=True,
+        verbose_name="Matrícula do Profissional"
+        )
+    nome = models.CharField(
+        max_length=255,
+        verbose_name="Nome do Profissional"
+        )
 
     def __str__(self):
-        return f"{self.nome} (Matrícula: {self.matricula})"
+        return f"{self.nome} - {self.matricula}"
 
     class Meta:
-        verbose_name = "médico"
-        verbose_name_plural = "médicos"
+        verbose_name = "Médico"
+        verbose_name_plural = "Médicos"
 
 
 class ListaEsperaCirurgicaQuerySet(models.QuerySet):
@@ -88,12 +112,12 @@ class ListaEsperaCirurgicaManager(models.Manager):
 
 class ListaEsperaCirurgica(models.Model):
     history = HistoricalRecords()
-
+    
     PRIORIDADE_CHOICES = [
         ('ONC', 'Paciente Oncológico'),
         ('BRE', 'Com Brevidade'),
         ('SEM', 'Sem Brevidade'),
-    ]
+        ]
 
     SITUACAO_CHOICES = [
         ('CA', 'CONSULTA AGENDADA'),
@@ -105,25 +129,53 @@ class ListaEsperaCirurgica(models.Model):
         ('T2F', 'TENTATIVA 2 FALHOU'),
         ('T3F', 'TENTATIVA 3 FALHOU, NÃO SERÃO REALIZADOS NOVOS CONTATOS'),
         ('CRS', 'CONTATO REALIZADO COM SUCESSO'),
-    ]
+        ]
 
-    paciente = models.ForeignKey(PacienteAghu, on_delete=models.CASCADE)
+    paciente = models.ForeignKey(
+        PacienteAghu,
+        on_delete=models.CASCADE
+        )
     procedimento = models.ForeignKey(
-        ProcedimentoAghu, on_delete=models.CASCADE)
-    especialidade = models.ForeignKey(EspecialidadeAghu, on_delete=models.CASCADE)
+        ProcedimentoAghu,
+        on_delete=models.CASCADE
+        )
+    especialidade = models.ForeignKey(
+        EspecialidadeAghu,
+        on_delete=models.CASCADE
+        )
     medico = models.ForeignKey(
-        ProfissionalAghu, on_delete=models.CASCADE, blank=True, null=True, verbose_name="médico")
-    data_entrada = models.DateTimeField(auto_now_add=True)
+        ProfissionalAghu,
+        on_delete=models.CASCADE,
+        blank=True, null=True,
+        verbose_name="médico"
+        )
+    data_entrada = models.DateTimeField(
+        auto_now_add=True
+        )
     prioridade = models.CharField(
-        max_length=3, choices=PRIORIDADE_CHOICES, default='SEM')
+        max_length=3,
+        choices=PRIORIDADE_CHOICES,
+        default='SEM')
     medida_judicial = models.BooleanField(
-        default=False, null=True, verbose_name="Medida Judicial")
+        default=False,
+        null=True,
+        verbose_name="Medida Judicial"
+        )
     situacao = models.CharField(
-        choices=SITUACAO_CHOICES, verbose_name="Situação")
+        choices=SITUACAO_CHOICES,
+        verbose_name="Situação"
+        )
     observacoes = models.CharField(
-        max_length=255, blank=True, null=True, verbose_name="Observações")
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Observações"
+        )
     data_novo_contato = models.DateField(
-        blank=True, null=True, verbose_name="Data para novo contato")
+        blank=True,
+        null=True,
+        verbose_name="Data para novo contato"
+        )
 
     MOTIVO_SAIDA_CHOICES = [
         ('MORTE', 'Paciente faleceu'),
@@ -132,14 +184,16 @@ class ListaEsperaCirurgica(models.Model):
     ]
 
     ativo = models.BooleanField(
-        default=True, verbose_name="Está ativo na fila?")
+        default=True,
+        verbose_name="Está ativo na fila?"
+        )
     motivo_saida = models.CharField(
         max_length=20,
         choices=MOTIVO_SAIDA_CHOICES,
         blank=True,
         null=True,
         verbose_name="Motivo da saída da fila"
-    )
+        )
 
     objects = ListaEsperaCirurgicaManager()
 

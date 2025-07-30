@@ -1,25 +1,21 @@
 {% extends "admin/change_form.html" %}
+{% load i18n %}
+
 {% block extrahead %}
 {{ block.super }}
 <style>
-    /* Este bloco de CSS personaliza a aparência do campo Select2 QUANDO ele está desabilitado.
-      Ele usa as classes do seu tema (bg-base-50, border, shadow-sm, etc.) para que o estilo
-      fique idêntico aos seus outros campos "readonly".
-    */
     .select2-container--default.select2-container--disabled .select2-selection--single {
-        background-color: #f9fafb; /* Equivalente a bg-base-50 ou bg-gray-50 */
-        border: 1px solid #e5e7eb;  /* Equivalente a border e border-gray-200 */
-        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* Equivalente a shadow-sm */
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
         cursor: not-allowed;
     }
-    /* Versão para o modo escuro (dark mode) */
     .dark .select2-container--default.select2-container--disabled .select2-selection--single {
-        background-color: #1f2937; /* Equivalente a dark:bg-base-800 */
-        border: 1px solid #374151;  /* Equivalente a dark:border-base-700 */
+        background-color: #1f2937;
+        border: 1px solid #374151;
     }
-    /* Estiliza o texto do placeholder quando desabilitado */
     .select2-container--default.select2-container--disabled .select2-selection--single .select2-selection__rendered {
-        color: #6b7280; /* Um tom de cinza para o texto */
+        color: #6b7280;
     }
 </style>
 {% endblock %}
@@ -77,20 +73,16 @@ function estilizarSelect2(fieldSelector, ajaxUrl, placeholder, isRequired) {
 $(document).ready(function() {
     console.log("Inicializando campos com dependência...");
 
-    // --- INICIALIZAÇÃO DOS CAMPOS ---
-    // Campos independentes
     estilizarSelect2('#id_paciente_api_choice', "{% url 'fila_cirurgica:paciente_api_autocomplete' %}", 'Clique ou digite para buscar o Paciente', true);
     estilizarSelect2('#id_especialidade_api_choice', "{% url 'fila_cirurgica:especialidade_api_autocomplete' %}", '1º: Busque a Especialidade', true);
     estilizarSelect2('#id_medico_api_choice', "{% url 'fila_cirurgica:medico_api_autocomplete' %}", 'Clique ou digite para buscar o médico (opcional)', false);
     estilizarCustomField('#id_change_reason');
     estilizarRequired('#id_change_reason');
 
-    // Campo Procedimento (dependente da Especialidade)
     const $especialidadeField = $('#id_especialidade_api_choice');
     const $procedimentoField = $('#id_procedimento_api_choice');
-    const procedimentoAutocompleteUrl = "{% url 'fila_cirurgica:procedimento_api_autocomplete' %}"; // URL fixa
+    const procedimentoAutocompleteUrl = "{% url 'fila_cirurgica:procedimento_api_autocomplete' %}";
 
-    // Inicializa o campo de procedimento
     estilizarSelect2(
         '#id_procedimento_api_choice',
         procedimentoAutocompleteUrl,
@@ -98,30 +90,21 @@ $(document).ready(function() {
         true
     );
 
-    // Função para gerenciar o estado do campo de procedimento
     function gerenciarEstadoProcedimento() {
         const especialidadeSelecionada = $especialidadeField.val();
 
         if (especialidadeSelecionada) {
-            // Se uma especialidade foi selecionada, habilita o campo de procedimento
             $procedimentoField.prop('disabled', false);
-            // Atualiza o placeholder para indicar que agora pode buscar
             $procedimentoField.data('select2').options.options.placeholder = '2º: Agora, busque o Procedimento';
         } else {
-            // Se nenhuma especialidade foi selecionada, desabilita e limpa o campo de procedimento
-            $procedimentoField.val(null).trigger('change'); // Limpa a seleção
+            $procedimentoField.val(null).trigger('change');
             $procedimentoField.prop('disabled', true);
-            // Atualiza o placeholder para indicar que a especialidade é necessária
             $procedimentoField.data('select2').options.options.placeholder = 'Selecione uma especialidade primeiro';
         }
-        // Garante que o Select2 reflita as mudanças de estado
         $procedimentoField.trigger('change.select2');
     }
 
-    // Define o estado inicial do campo ao carregar a página
     gerenciarEstadoProcedimento();
-
-    // Adiciona o gatilho para futuras mudanças na especialidade
     $especialidadeField.on('change', gerenciarEstadoProcedimento);
 });
 </script>
