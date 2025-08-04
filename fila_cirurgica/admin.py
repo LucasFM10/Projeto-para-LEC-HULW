@@ -172,6 +172,15 @@ class RemoverDaFilaForm(forms.Form):
             'class': 'border border-base-200 bg-white font-medium min-w-20 placeholder-base-400 rounded shadow-sm text-font-default-light text-sm focus:ring focus:ring-primary-300 focus:border-primary-600 focus:outline-none group-[.errors]:border-red-600 group-[.errors]:focus:ring-red-200 dark:bg-base-900 dark:border-base-700 dark:text-font-default-dark dark:focus:border-primary-600 dark:focus:ring-primary-700 dark:focus:ring-opacity-50 dark:group-[.errors]:border-red-500 dark:group-[.errors]:focus:ring-red-600/40 px-3 py-2 w-full pr-8 max-w-2xl appearance-none'
         })
     )
+    change_reason = forms.CharField(
+        label="Explicação detalhada da exclusão",
+        max_length=100,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Explicação',
+            'class': 'border border-base-200 bg-white font-medium min-w-20 placeholder-base-400 rounded shadow-sm text-font-default-light text-sm focus:ring focus:ring-primary-300 focus:border-primary-600 focus:outline-none group-[.errors]:border-red-600 group-[.errors]:focus:ring-red-200 dark:bg-base-900 dark:border-base-700 dark:text-font-default-dark dark:focus:border-primary-600 dark:focus:ring-primary-700 dark:focus:ring-opacity-50 dark:group-[.errors]:border-red-500 dark:group-[.errors]:focus:ring-red-600/40 px-3 py-2 w-full max-w-2xl'
+        })
+    )
 
 class RemoverDaFilaView(UnfoldModelAdminViewMixin, FormView):
     # Título que aparecerá no cabeçalho da página
@@ -206,6 +215,7 @@ class RemoverDaFilaView(UnfoldModelAdminViewMixin, FormView):
             obj.ativo = False
             obj.motivo_saida = motivo
             obj.save()
+            update_change_reason(obj, form.cleaned_data.get('change_reason', ''))
         
         # Linha correta
         self.model_admin.message_user(self.request, f"{count} pacientes removidos da fila com sucesso.", messages.SUCCESS)
@@ -216,35 +226,50 @@ class RemoverDaFilaView(UnfoldModelAdminViewMixin, FormView):
         )
         return HttpResponseRedirect(changelist_url)
 
+class AtivoNaFilaFilter(SimpleListFilter):
+    title = "Status na fila"
+    parameter_name = "ativo"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("ativos", "Ativo"),
+            ("inativos", "Inativo"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "ativos":
+            return queryset.filter(ativo=True)
+        elif self.value() == "inativos":
+            return queryset.filter(ativo=False)
+        return queryset 
+
 @admin.register(ListaEsperaCirurgica)
 class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
     form = ListaEsperaCirurgicaForm
     readonly_fields = ['data_entrada']
 
+    list_display_links = ('paciente',)
+
     list_display = (
         'get_posicao',
         'paciente',
         'prioridade',
-        'medida_judicial',
+        'judicial_personalizado',
         'especialidade',
         'procedimento',
-        'ativo_personalizado', # Certifique-se de que está aqui para ser exibido
+        'ativo_personalizado',
     )
     list_filter_submit = True
     list_filter = [
+        AtivoNaFilaFilter,
         ('especialidade', AutocompleteSelectMultipleFilter),
         ('procedimento', AutocompleteSelectMultipleFilter),
         ('medico', AutocompleteSelectMultipleFilter),
     ]
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return (
-            qs
-            .order_by(
-                'data_entrada'
-            )
-        )
+        return ListaEsperaCirurgica.objects.ordered()
+
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
@@ -294,6 +319,24 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
         super().save_model(request, obj, form, change)
 
         update_change_reason(obj, form.cleaned_data.get('change_reason', ''))
+        
+    def judicial_personalizado(self, obj):
+        if obj.medida_judicial:
+            return format_html('''
+                <div class="flex items-center ">
+                    <div class="block mr-3 outline rounded-full ml-1 h-1 w-1 bg-green-500 outline-green-200 dark:outline-green-500/20"></div>
+                    <span>Sim</span>
+                </div>
+            ''')
+        else:
+            return format_html('''
+                <div class="flex items-center ">
+                    <div class="block mr-3 outline rounded-full ml-1 h-1 w-1 bg-red-500 outline-red-200 dark:outline-red-500/20"></div>
+                    <span>Não</span>
+                </div>
+            ''')
+    judicial_personalizado.short_description = 'Possui medida judicial??'
+    judicial_personalizado.admin_order_field = 'medida_judicial'
         
     def ativo_personalizado(self, obj):
         if obj.ativo:

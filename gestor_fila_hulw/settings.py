@@ -36,14 +36,15 @@ SIMPLE_HISTORY_REVERT_DISABLED = True
 # Application definition
 
 INSTALLED_APPS = [
+    'fila_cirurgica',
+    
+
     'unfold',
     'unfold.contrib.forms',
     'unfold.contrib.filters',
     'unfold.contrib.simple_history',
     
     'simple_history',
-
-    'fila_cirurgica',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -170,40 +171,52 @@ UNFOLD = {
     "SITE_TITLE": "Gestor de Fila Cirúrgica",
     "SITE_HEADER": "Gestor de Fila - HULW",
     "SITE_URL": reverse_lazy("admin:index"),
-    # "SITE_SYMBOL": "health_and_safety",  # Ícone do Google Fonts
     "SITE_SYMBOL": "assignment_add",
-
-    # --- Logo e Favicon (descomente e adicione seus arquivos em 'static/') ---
-    # "SITE_LOGO": {
-    #     "light": lambda request: static("logo-light.svg"),
-    #     "dark": lambda request: static("logo-dark.svg"),
-    # },
-    # "SITE_FAVICONS": [
-    #     {
-    #         "rel": "icon",
-    #         "sizes": "32x32",
-    #         "type": "image/svg+xml",
-    #         "href": lambda request: static("favicon.svg"),
-    #     },
-    # ],
 
     # --- Funcionalidades e Aparência ---
     "SHOW_HISTORY": True,  # Mostra o botão "Histórico" (requer simple_history)
     "SHOW_VIEW_ON_SITE": False,  # Esconde o botão "Ver no site"
     "ENVIRONMENT": environment_callback, # Mostra o ambiente atual (Dev/Prod)
     "SHOW_LANGUAGES": True, # Mostra o seletor de idiomas
-
-    # --- Barra Lateral (Sidebar) ---
     "SIDEBAR": {
         "show_search": True,  # Habilita a busca na barra lateral
-        "show_all_applications": True, # Mostra todas as apps em um dropdown
+        "navigation": [
+            {
+                "title": _("Autenticação e Autorização"),
+                "separator": True,  # Top border
+                "collapsible": True,  # Collapsible group of links
+                "items": [
+                    {
+                        "title": _("Usuários"),
+                        "icon": "people",
+                        "link": reverse_lazy("admin:auth_group_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Grupos"),
+                        "icon": "people",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                ],
+            },
+            {
+                "title": _("Fila Cirúrgica"),
+                "separator": True,  # Top border
+                "items": [
+                    {
+                        "title": _("Dashboard"),
+                        "icon": "Dashboard",
+                        "link": reverse_lazy("admin:fila_cirurgica_indicadorespecialidade_changelist"),
+                    },
+                    {
+                        "title": _("Lista de Espera Cirúrgica"),
+                        "icon": "Hourglass",
+                        "link": reverse_lazy("admin:fila_cirurgica_listaesperacirurgica_changelist"),
+                    },
+                ],
+            },
+        ],
     },
 
-    # --- Estilos e Scripts Personalizados (descomente para usar) ---
-    # "STYLES": [
-    #     lambda request: static("css/custom_admin.css"),
-    # ],
-    # "SCRIPTS": [
-    #     lambda request: static("js/custom_admin.js"),
-    # ],
 }

@@ -2,15 +2,6 @@ from django import forms
 from .models import ListaEsperaCirurgica
 from django.urls import reverse_lazy
 
-# forms.py
-class RemoverDaFilaForm(forms.Form):
-    motivo = forms.ChoiceField(
-        label="Selecione o motivo da remoção",
-        choices=ListaEsperaCirurgica.MOTIVO_SAIDA_CHOICES,
-        required=True,
-        widget=forms.Select(attrs={"class": "form-control", "required": "required"})
-    )
-
 class ListaEsperaCirurgicaForm(forms.ModelForm):
 
     class RawChoiceField(forms.ChoiceField):

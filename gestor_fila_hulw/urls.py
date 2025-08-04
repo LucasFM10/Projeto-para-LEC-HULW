@@ -11,8 +11,6 @@ from django.conf.urls.i18n import i18n_patterns
 urlpatterns = ([
     # 1. Redireciona a URL raiz ('') para a página de admin ('/admin/')
     path('', RedirectView.as_view(url='/admin/', permanent=True)),
-    # 2. Mantém a URL do admin para que o redirecionamento tenha um destino
-    path('admin/', admin.site.urls),
     path("i18n/", include("django.conf.urls.i18n")),
     path("fila_cirurgica/", include("fila_cirurgica.urls")),
         
