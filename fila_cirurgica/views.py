@@ -1,8 +1,8 @@
 # fila_cirurgica/views.py
-from .utils import api_autocomplete_proxy
+from .utils import api_autocomplete_proxy, api_autocomplete_procedimento
 
 def procedimento_api_autocomplete(request):
-    return api_autocomplete_proxy(request, 'procedimentos', 'COD_PROCEDIMENTO', '{COD_PROCEDIMENTO} - {PROCEDIMENTO}')
+    return api_autocomplete_procedimento(request)
 
 def paciente_api_autocomplete(request):
     return api_autocomplete_proxy(request, 'pacientes', 'PRONTUARIO_PAC', '{NOME_PACIENTE} (Prontuário: {PRONTUARIO_PAC})')

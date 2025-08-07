@@ -198,8 +198,8 @@ class ListaEsperaCirurgica(models.Model):
     objects = ListaEsperaCirurgicaManager()
 
     class Meta:
-        verbose_name = "Lista de Espera Cirúrgica"
-        verbose_name_plural = "Lista de Espera Cirúrgica"
+        verbose_name = "Entrada da Lista de Espera Cirúrgica"
+        verbose_name_plural = "Entradas da Lista de Espera Cirúrgica"
 
     def __str__(self):
         return f"{self.paciente} esperando {self.procedimento} em {self.especialidade}"

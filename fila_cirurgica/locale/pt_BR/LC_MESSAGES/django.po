@@ -71,3 +71,6 @@ msgstr "Filtros"
 
 msgid "By %(filter_title)s"
 msgstr "Por %(filter_title)s"
+
+msgid "Please correct the errors below"
+msgstr "Por favor, corrija os erros abaixo"

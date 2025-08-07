@@ -284,6 +284,7 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
             ),
             "placeholder": "Motivo da alteração"
         })
+        form.current_request = request
         return form
     
 
