@@ -1,4 +1,4 @@
-{% extends "admin/base_site.html" %}
+{% extends "admin/index.html" %}
 {% load i18n %}
 
 {% block title %}Indicadores de Especialidades{% endblock %}
@@ -31,82 +31,152 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+  const cores = [
+    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+    '#EC4899', '#14B8A6', '#F43F5E', '#6366F1', '#84CC16'
+  ];
+
+  const commonOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        labels: {
+          color: '#374151',
+          font: { size: 13 }
+        }
+      },
+      tooltip: {
+        backgroundColor: '#111827',
+        titleColor: '#F9FAFB',
+        bodyColor: '#D1D5DB',
+        borderColor: '#6B7280',
+        borderWidth: 1
+      },
+      title: {
+        display: false
+      }
+    }
+  };
+
   /* ---------- Gráfico de Pizza ---------- */
-  const ctxPie = document.getElementById('pieChart').getContext('2d');
-  new Chart(ctxPie, {
+  new Chart(document.getElementById('pieChart'), {
     type: 'pie',
     data: {
       labels: {{ labels|safe }},
-      datasets: [{ data: {{ data|safe }}, label: '{% trans "Pacientes" %}' }]
+      datasets: [{
+        data: {{ data|safe }},
+        backgroundColor: cores,
+        borderWidth: 1,
+        borderColor: '#ffffff',
+        hoverOffset: 8
+      }]
     },
     options: {
-      responsive: true,
+      ...commonOptions,
       plugins: {
-        tooltip: { callbacks: {
-          label: ctx => {
-            const pct = {{ percentages|safe }}[ctx.dataIndex];
-            return ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+        ...commonOptions.plugins,
+        tooltip: {
+          ...commonOptions.plugins.tooltip,
+          callbacks: {
+            label: ctx => {
+              const pct = {{ percentages|safe }}[ctx.dataIndex];
+              return `${ctx.label}: ${ctx.parsed} (${pct}%)`;
+            }
           }
-        }}
+        }
       }
     }
   });
 
   /* ---------- Gráfico de Barras – últimos 3 meses ---------- */
-  const ctxBar = document.getElementById('barChart').getContext('2d');
-  new Chart(ctxBar, {
+  new Chart(document.getElementById('barChart'), {
     type: 'bar',
     data: {
       labels: {{ labels_bar|safe }},
       datasets: [{
         label: '{% trans "Pacientes na Lista" %}',
         data: {{ data_bar|safe }},
-        borderWidth: 1
+        backgroundColor: '#3B82F6',
+        borderRadius: 5
       }]
     },
     options: {
-      responsive: true,
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      ...commonOptions,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { precision: 0, color: '#6B7280', font: { size: 12 } },
+          grid: { color: '#E5E7EB' }
+        },
+        x: {
+          ticks: { color: '#6B7280', font: { size: 12 } },
+          grid: { display: false }
+        }
+      }
     }
   });
 
-  /* ---------- NOVO: Top 10 – procedimentos com mais pacientes ---------- */
-  const ctxProcCount = document.getElementById('procCountChart').getContext('2d');
-  new Chart(ctxProcCount, {
+  /* ---------- Top 10 – Procedimentos com mais pacientes ---------- */
+  new Chart(document.getElementById('procCountChart'), {
     type: 'bar',
     data: {
       labels: {{ labels_proc_count|safe }},
       datasets: [{
         label: '{% trans "Pacientes" %}',
         data: {{ data_proc_count|safe }},
-        borderWidth: 1
+        backgroundColor: '#10B981',
+        borderRadius: 5
       }]
     },
     options: {
-      indexAxis: 'y',             // barras horizontais
-      responsive: true,
-      scales: { x: { beginAtZero: true } }
+      ...commonOptions,
+      indexAxis: 'y',
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: { color: '#6B7280' },
+          grid: { color: '#E5E7EB' }
+        },
+        y: {
+          ticks: { color: '#6B7280' },
+          grid: { display: false }
+        }
+      }
     }
   });
 
-  /* ---------- NOVO: Top 10 – maior tempo de espera ---------- */
-  const ctxProcWait = document.getElementById('procWaitChart').getContext('2d');
-  new Chart(ctxProcWait, {
+  /* ---------- Top 10 – Procedimentos com maior tempo de espera ---------- */
+  new Chart(document.getElementById('procWaitChart'), {
     type: 'bar',
     data: {
       labels: {{ labels_proc_wait|safe }},
       datasets: [{
         label: '{% trans "Dias de Espera" %}',
         data: {{ data_proc_wait|safe }},
-        borderWidth: 1
+        backgroundColor: '#F59E0B',
+        borderRadius: 5
       }]
     },
     options: {
+      ...commonOptions,
       indexAxis: 'y',
-      responsive: true,
-      scales: { x: { beginAtZero: true } }
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: { color: '#6B7280' },
+          grid: { color: '#E5E7EB' }
+        },
+        y: {
+          ticks: { color: '#6B7280' },
+          grid: { display: false }
+        }
+      }
     }
   });
 </script>
+
+
 {% endblock %}
