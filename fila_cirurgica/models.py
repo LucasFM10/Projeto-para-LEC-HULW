@@ -89,6 +89,7 @@ class ListaEsperaCirurgicaQuerySet(models.QuerySet):
                 When(medida_judicial=True, then=0),
                 When(prioridade='ONC', then=1),
                 When(prioridade='BRE', then=2),
+                When(ativo=False, then=4),
                 default=3,
                 output_field=IntegerField()
             ),
@@ -98,14 +99,15 @@ class ListaEsperaCirurgicaQuerySet(models.QuerySet):
 class ListaEsperaCirurgicaManager(models.Manager):
     def get_queryset(self):
         return ListaEsperaCirurgicaQuerySet(self.model, using=self._db)
-
+    
     def ordered(self):
         return (
             self.get_queryset()
                 .with_prioridade_index()
                 .order_by(
+                    '-ativo',                # ativo primeiro
                     'prioridade_num',           # primeiro: medida/clinica
-                    'data_entrada'              # por fim: ordem de chegada
+                    'data_entrada',              # por fim: ordem de chegada
             )
         )
 
@@ -208,8 +210,12 @@ class ListaEsperaCirurgica(models.Model):
         """
         Retorna a posição do objeto na fila, considerando medida judicial e tipo de prioridade.
         """
+
+        if not self.ativo:
+            return "\\"
+        
         qs = type(self).objects.ordered().values_list('id', flat=True)
-        return list(qs).index(self.id) + 1
+        return list(qs.filter(ativo=True)).index(self.id) + 1
 
 
 class IndicadorEspecialidade(ListaEsperaCirurgica):

@@ -138,17 +138,12 @@
             true
         );
     
-        // Sempre aplica estilos de readonly aos campos com atributo data-readonly-api
         aplicarEstiloCamposReadOnlyAPI();
     
-        function gerenciarEstadoProcedimento() {
+        function atualizarEstiloCampoProcedimento() {
             const especialidadeSelecionada = $especialidadeField.val();
-    
-            $procedimentoField.val(null).trigger('change');
-            $procedimentoField.empty();
-
             const isProcedimentoReadonly = $procedimentoField.is('[data-readonly-api="true"]');
-
+    
             if (especialidadeSelecionada && !isProcedimentoReadonly) {
                 $procedimentoField.prop('disabled', false);
                 desestilizarReadOnlySelect2('id_procedimento_api_choice');
@@ -161,11 +156,27 @@
     
             $procedimentoField.trigger('change.select2');
         }
-
-        gerenciarEstadoProcedimento();
     
+        function resetarProcedimentoSelecionado() {
+            const especialidadeSelecionada = $especialidadeField.val();
+            const isProcedimentoReadonly = $procedimentoField.is('[data-readonly-api="true"]');
+    
+            if (especialidadeSelecionada && !isProcedimentoReadonly) {
+                $procedimentoField.val(null).trigger('change');
+                $procedimentoField.empty();
+            }
+        }
+    
+        function gerenciarEstadoProcedimento() {
+            resetarProcedimentoSelecionado();
+            atualizarEstiloCampoProcedimento();
+        }
+    
+        atualizarEstiloCampoProcedimento();
+        
         $especialidadeField.on('change', gerenciarEstadoProcedimento);
     });
+    
     </script>
     
 
