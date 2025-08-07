@@ -142,7 +142,6 @@
         aplicarEstiloCamposReadOnlyAPI();
     
         function gerenciarEstadoProcedimento() {
-            window.alert('teste');
             const especialidadeSelecionada = $especialidadeField.val();
     
             $procedimentoField.val(null).trigger('change');
@@ -164,8 +163,6 @@
         }
 
         gerenciarEstadoProcedimento();
-
-        window.alert('especialidadeField: ' + $especialidadeField.length);
     
         $especialidadeField.on('change', gerenciarEstadoProcedimento);
     });
