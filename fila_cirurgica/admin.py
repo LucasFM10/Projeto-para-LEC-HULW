@@ -423,6 +423,16 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
     def procedimento(self, obj):
         return obj.procedimento
     
+    def has_change_permission(self, request, obj=None):
+        if obj and not obj.ativo:   # exemplo
+            return False            # abre read-only
+        return super().has_change_permission(request, obj)
+    
+    def has_delete_permission(self, request, obj=None):
+        if obj and not obj.ativo:   # exemplo
+            return False            # abre read-only
+        return super().has_delete_permission(request, obj)
+
     class Media:
         css = {
             "all": (
