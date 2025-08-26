@@ -39,6 +39,9 @@ from django.views.generic import FormView
 from unfold.views import UnfoldModelAdminViewMixin
 import requests
 from simple_history.utils import update_change_reason
+from django.urls import reverse
+from django.utils.html import format_html
+from django.contrib.admin.utils import quote
 
 # Registro de usuário e grupo personalizados
 admin.site.unregister(User)
@@ -248,7 +251,7 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
     form = ListaEsperaCirurgicaForm
     readonly_fields = ['data_entrada']
 
-    list_display_links = ('paciente',)
+    list_display_links = None
 
     list_display = (
         'get_posicao',
@@ -258,6 +261,7 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
         'especialidade',
         'procedimento',
         'ativo_personalizado',
+        'acoes',
     )
     list_filter_submit = True
     list_filter = [
@@ -409,7 +413,7 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
         # Implemente a lógica para obter a posição na fila aqui
         # Exemplo simples:
         # return ListaEsperaCirurgica.objects.filter(data_entrada__lt=obj.data_entrada).count() + 1
-        return obj.get_posicao() # Se você já tem esse método no modelo
+        return format_html('<div style="text-align:center;min-width:3ch;">{}</div>', obj.get_posicao()) # Se você já tem esse método no modelo
 
     @admin.display(description="Especialidade")
     def especialidade(self, obj):
@@ -418,6 +422,60 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
     @admin.display(description="Procedimento Realizado")
     def procedimento(self, obj):
         return obj.procedimento
+    
+    class Media:
+        css = {
+            "all": (
+                "https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.34.1/dist/tabler-icons.min.css",
+            )
+        }
+        
+    @admin.display(description="Ações", ordering=False)
+    def acoes(self, obj):
+        opts = self.model._meta
+        pk = quote(obj.pk)
+
+        change_url  = reverse(f"admin:{opts.app_label}_{opts.model_name}_change", args=[pk])
+        history_url = reverse(f"admin:{opts.app_label}_{opts.model_name}_history", args=[pk])
+        remover_url = reverse(f"admin:{opts.app_label}_{opts.model_name}_remover_da_fila") + f"?ids={pk}"
+
+        if obj.ativo:
+            # Ativo: Editar + Histórico + Remover
+            return format_html(
+                '''
+                <div style="text-align:center;min-width:3ch;">
+                <div style="text-align:center" class="flex items-center gap-1.5">
+                <a href="{}" class="inline-flex items-center p-1.5 rounded hover:bg-blue-50 text-blue-600" title="Editar">
+                    <i class="ti ti-pencil" style="font-size:1.05rem;line-height:1"></i>
+                </a>
+                <a href="{}" class="inline-flex items-center p-1.5 rounded hover:bg-amber-50 text-amber-600" title="Histórico">
+                    <i class="ti ti-history" style="font-size:1.05rem;line-height:1"></i>
+                </a>
+                <a href="{}" class="inline-flex items-center p-1.5 rounded hover:bg-red-50 text-red-600" title="Remover da fila">
+                    <i class="ti ti-x" style="font-size:1.05rem;line-height:1"></i>
+                </a>
+                </div>
+                </div>
+                ''',
+                change_url, history_url, remover_url
+            )
+        else:
+            # Inativo: só Histórico
+            return format_html(
+                '''
+                <div style="text-align:center;min-width:3ch;>
+                <div class="flex items-center gap-1.5">
+                <a href="{}" class="inline-flex items-center p-1.5 rounded hover:bg-gray-50 text-gray-700" title="Ver">
+                    <i class="ti ti-eye" style="font-size:1.05rem;line-height:1"></i>
+                </a>
+                <a href="{}" class="inline-flex items-center p-1.5 rounded hover:bg-amber-50 text-amber-600" title="Histórico">
+                    <i class="ti ti-history" style="font-size:1.05rem;line-height:1"></i>
+                </a>
+                </div>
+                </div>
+                ''',
+                change_url, history_url
+            )
 
     # NOVO: Sobrescrever delete_view para redirecionar
     def delete_view(self, request, object_id, extra_context=None):

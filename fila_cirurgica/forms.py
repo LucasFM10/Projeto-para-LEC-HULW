@@ -111,7 +111,6 @@ class ListaEsperaCirurgicaForm(forms.ModelForm):
         Sobrescreve o método clean para validar regras de negócio
         que envolvem múltiplos campos.
         """
-        print("ASDSAD")
         cleaned_data = super().clean()
 
         procedimento_id = cleaned_data.get('procedimento_api_choice')
@@ -129,7 +128,5 @@ class ListaEsperaCirurgicaForm(forms.ModelForm):
                         code='invalid_procedure_for_specialty'
                     )
                 )
-
-        print(cleaned_data)
 
         return cleaned_data
