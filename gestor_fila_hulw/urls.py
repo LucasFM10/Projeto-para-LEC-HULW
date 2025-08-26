@@ -13,11 +13,11 @@ urlpatterns = ([
     path('', RedirectView.as_view(url='/admin/', permanent=True)),
     path("i18n/", include("django.conf.urls.i18n")),
     path("fila_cirurgica/", include("fila_cirurgica.urls")),
-        
     ]
 
     + i18n_patterns(
         path("admin/", admin.site.urls),
+        path('consulta-fila/', include('externo.urls')),
     )
 )
 

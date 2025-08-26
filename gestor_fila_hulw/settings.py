@@ -37,6 +37,7 @@ SIMPLE_HISTORY_REVERT_DISABLED = True
 
 INSTALLED_APPS = [
     'fila_cirurgica',
+    'externo',
     
 
     'unfold',
@@ -144,8 +145,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]       # para desenvolvimento
+STATIC_ROOT = BASE_DIR / "staticfiles"         # para coletar em produção
 
 
 # Default primary key field type
@@ -187,13 +189,13 @@ UNFOLD = {
                 "collapsible": True,  # Collapsible group of links
                 "items": [
                     {
-                        "title": _("Usuários"),
+                        "title": _("Grupos"),
                         "icon": "people",
                         "link": reverse_lazy("admin:auth_group_changelist"),
                         "permission": lambda request: request.user.is_superuser,
                     },
                     {
-                        "title": _("Grupos"),
+                        "title": _("Usuários"),
                         "icon": "people",
                         "link": reverse_lazy("admin:auth_user_changelist"),
                         "permission": lambda request: request.user.is_superuser,

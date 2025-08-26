@@ -7,3 +7,6 @@ operador:
 
 user: pedro_operador
 password: senha###
+
+Filtros extras:
+- pacientes oncológicos, pacientes judicializados

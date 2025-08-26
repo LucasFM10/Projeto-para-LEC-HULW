@@ -82,18 +82,22 @@ class ListaEsperaCirurgicaForm(forms.ModelForm):
                 proc = self.instance.procedimento
                 self.fields['procedimento_api_choice'].choices = [
                     (proc.codigo, f"{proc.codigo} - {proc.nome}")]
+                self.initial['procedimento_api_choice'] = proc.codigo
             if self.instance.paciente:
                 pac = self.instance.paciente
                 self.fields['paciente_api_choice'].choices = [(
                     pac.prontuario, f"{pac.nome} (Prontuário: {pac.prontuario}")]
+                self.initial['paciente_api_choice'] = pac.prontuario
             if self.instance.medico:
                 med = self.instance.medico
                 self.fields['medico_api_choice'].choices = [(
                     med.matricula, f"{med.nome} (Matrícula: {med.matricula}")]
+                self.initial['medico_api_choice'] = med.matricula
             if self.instance.especialidade:
                 esp = self.instance.especialidade
                 self.fields['especialidade_api_choice'].choices = [
                     (esp.cod_especialidade, esp.nome_especialidade)]
+                self.initial['especialidade_api_choice'] = esp.cod_especialidade
 
             if not request.user.is_superuser:
                 # Se for superuser, permite editar os campos
@@ -107,6 +111,7 @@ class ListaEsperaCirurgicaForm(forms.ModelForm):
         Sobrescreve o método clean para validar regras de negócio
         que envolvem múltiplos campos.
         """
+        print("ASDSAD")
         cleaned_data = super().clean()
 
         procedimento_id = cleaned_data.get('procedimento_api_choice')
@@ -125,28 +130,6 @@ class ListaEsperaCirurgicaForm(forms.ModelForm):
                     )
                 )
 
+        print(cleaned_data)
+
         return cleaned_data
-
-    def clean_procedimento_api_choice(self):
-        data = self.cleaned_data.get('procedimento_api_choice')
-        if not data:
-            raise forms.ValidationError("Este campo é obrigatório.")
-        return data
-
-    def clean_paciente_api_choice(self):
-        data = self.cleaned_data.get('paciente_api_choice')
-        if not data:
-            raise forms.ValidationError("Este campo é obrigatório.")
-        return data
-
-    def clean_especialidade_api_choice(self):
-        data = self.cleaned_data.get('especialidade_api_choice')
-        if not data:
-            raise forms.ValidationError("Este campo é obrigatório.")
-        return data
-
-    def clean_medico_api_choice(self):
-        data = self.cleaned_data.get('medico_api_choice')
-        if not data:
-            raise forms.ValidationError("Este campo é obrigatório.")
-        return data

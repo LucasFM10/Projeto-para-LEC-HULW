@@ -295,18 +295,19 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         """Processa campos de autocomplete com dados da API externa."""
-        try:
-            # Paciente
-            obj.paciente = get_or_create_paciente(form.cleaned_data.get('paciente_api_choice'))
+        try:    
+            if not obj:
+                # Paciente
+                obj.paciente = get_or_create_paciente(form.cleaned_data.get('paciente_api_choice'))
 
-            # Procedimento
-            obj.procedimento = get_or_create_procedimento(form.cleaned_data.get('procedimento_api_choice'))
+                # Procedimento
+                obj.procedimento = get_or_create_procedimento(form.cleaned_data.get('procedimento_api_choice'))
 
-            # Especialidade
-            obj.especialidade = get_or_create_especialidade(form.cleaned_data.get('especialidade_api_choice'))
+                # Especialidade
+                obj.especialidade = get_or_create_especialidade(form.cleaned_data.get('especialidade_api_choice'))
 
-            # Médico (opcional)
-            obj.medico = get_or_create_profissional(form.cleaned_data.get('medico_api_choice'))
+                # Médico (opcional)
+                obj.medico = get_or_create_profissional(form.cleaned_data.get('medico_api_choice'))
 
         except requests.RequestException as e:
             self.message_user(
