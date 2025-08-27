@@ -1,0 +1,41 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>{% block title %}Portal{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'dist/main.css' %}"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400" rel="stylesheet">
+
+  <style>.material-symbols-outlined{vertical-align:middle}</style>
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-800">
+  <header class="bg-white border-b">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <a href="{% url 'portal:dashboard' %}" class="text-lg font-semibold">Portal</a>
+      <nav class="flex items-center gap-4 text-sm">
+        <a class="text-gray-600 hover:text-gray-900" href="{% url 'portal:dashboard' %}">Dashboard</a>
+        <a class="text-gray-600 hover:text-gray-900" href="{% url 'portal:fila_list' %}">Fila</a>
+        <form method="post" action="{% url 'portal:logout' %}" class="inline">{% csrf_token %}
+          <button class="text-gray-500 hover:text-gray-800" type="submit">Sair</button>
+        </form>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8">
+    {% for message in messages %}
+      <div class="mb-4 rounded border p-3 text-sm
+          {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800
+          {% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-800
+          {% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="py-8 text-center text-xs text-gray-500">© {% now "Y" %} Portal</footer>
+</body>
+</html>

@@ -38,12 +38,13 @@ SIMPLE_HISTORY_REVERT_DISABLED = True
 INSTALLED_APPS = [
     'fila_cirurgica',
     'externo',
-    
+    'portal',
 
     'unfold',
     'unfold.contrib.forms',
     'unfold.contrib.filters',
     'unfold.contrib.simple_history',
+    "django_filters",
     
     'simple_history',
 
@@ -113,6 +114,9 @@ DATABASES = {
     }
 }
 
+LOGIN_URL = "portal:login"
+LOGIN_REDIRECT_URL = "portal:dashboard"
+LOGOUT_REDIRECT_URL = "portal:login"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

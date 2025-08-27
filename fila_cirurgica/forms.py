@@ -99,12 +99,12 @@ class ListaEsperaCirurgicaForm(forms.ModelForm):
                     (esp.cod_especialidade, esp.nome_especialidade)]
                 self.initial['especialidade_api_choice'] = esp.cod_especialidade
 
-            if not request.user.is_superuser:
-                # Se for superuser, permite editar os campos
-                for field_name in ['procedimento_api_choice', 'paciente_api_choice', 'medico_api_choice', 'especialidade_api_choice']:
-                    self.fields[field_name].disabled = True
-                    # Adiciona um atributo customizado para indicar no template que está readonly
-                    self.fields[field_name].widget.attrs['data-readonly-api'] = 'true'
+            # if not request.user.is_superuser:
+            #     # Se for superuser, permite editar os campos
+            #     for field_name in ['procedimento_api_choice', 'paciente_api_choice', 'medico_api_choice', 'especialidade_api_choice']:
+            #         self.fields[field_name].disabled = True
+            #         # Adiciona um atributo customizado para indicar no template que está readonly
+            #         self.fields[field_name].widget.attrs['data-readonly-api'] = 'true'
 
     def clean(self):
         """

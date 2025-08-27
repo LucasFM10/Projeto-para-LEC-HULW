@@ -1,0 +1,32 @@
+{% extends "portal/base_portal.html" %}
+{% block title %}{{ view.object|default_if_none:"Nova entrada" }} · Fila{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-semibold">{{ view.object|default_if_none:"Nova entrada" }}</h1>
+  <a href="{% url 'portal:fila_list' %}" class="inline-flex items-center px-3 py-2 rounded border">Voltar</a>
+</div>
+
+{% if view.object and view.object.ativo is False %}
+  <div class="mb-4 rounded border border-amber-200 bg-amber-50 text-amber-800 p-3 text-sm">
+    Este registro está inativo — formulário somente visualização.
+  </div>
+{% endif %}
+
+<form method="post" class="bg-white border rounded-lg shadow-sm p-6 space-y-4">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+
+  {% for field in form.visible_fields %}
+    <div>
+      <label class="block text-sm font-medium mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>{% endif %}
+      {{ field.errors }}
+    </div>
+  {% endfor %}
+
+  {% if not view.object or view.object.ativo %}
+    <button class="bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700">Salvar</button>
+  {% endif %}
+</form>
+{% endblock %}

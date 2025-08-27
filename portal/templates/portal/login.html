@@ -1,0 +1,28 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Login · Portal</title>
+  <link rel="stylesheet" href="{% static 'dist/main.css' %}"/>
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-800 flex items-center justify-center">
+  <div class="max-w-md w-full bg-white border rounded-lg shadow-sm p-6">
+    <h1 class="text-xl font-semibold mb-4">Login</h1>
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <div>
+        <label class="block text-sm font-medium mb-1">Usuário</label>
+        <input type="text" name="username" autofocus required class="w-full rounded border px-3 py-2"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Senha</label>
+        <input type="password" name="password" required class="w-full rounded border px-3 py-2"/>
+      </div>
+      <button class="w-full bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700">Entrar</button>
+    </form>
+  </div>
+</body>
+</html>
