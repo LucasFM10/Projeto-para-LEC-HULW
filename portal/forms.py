@@ -1,50 +1,103 @@
+# portal/forms.py
 from django import forms
+from django.conf import settings            # <-- novo
+import requests                              # <-- novo
 from fila_cirurgica.models import ListaEsperaCirurgica
 
-# Tenta reaproveitar o ModelForm oficial do projeto (se existir)
-try:
-    from fila_cirurgica.forms import ListaEsperaCirurgicaForm as BaseListaEsperaForm
-except Exception:
-    class BaseListaEsperaForm(forms.ModelForm):
-        """Fallback simples, mantendo compatibilidade básica."""
-        class Meta:
-            model = ListaEsperaCirurgica
-            fields = "__all__"
-            widgets = {
-                # Exemplos de widgets com Tailwind (ajuste nomes conforme seus campos)
-                # "prioridade": forms.NumberInput(attrs={"class": "w-full border rounded px-3 py-2"}),
-                # "medida_judicial": forms.CheckboxInput(attrs={"class": "h-4 w-4"}),
-            }
-
-
-class PortalListaEsperaForm(BaseListaEsperaForm):
-    """Form usado no Portal. Se o registro estiver inativo, torna-se somente leitura."""
-    change_reason = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={"class": "w-full border rounded px-3 py-2"}),
-        help_text="Motivo da alteração (opcional).",
+class PortalCreateFormLight(forms.ModelForm):
+    # ---- CAMPO NOVO (fake, só para exibir opções vindas da API) ----
+    especialidade_api = forms.ChoiceField(
+        label="Especialidade",
+        required=True,
+        choices=[("", "Digite para buscar…")],
+        widget=forms.Select(attrs={"id": "id_especialidade_api"})
     )
+
+    class Meta:
+        model = ListaEsperaCirurgica
+        fields = ["prioridade", "medida_judicial", "situacao", "observacoes"]
+        widgets = {
+            "medida_judicial": forms.CheckboxInput(attrs={"class": "h-4 w-4"}),
+            "observacoes": forms.Textarea(attrs={
+                "rows": 4, "placeholder": "Observações gerais…",
+                "class": "w-full border rounded px-3 py-2",
+            }),
+        }
+        labels = {
+            "prioridade": "Prioridade",
+            "medida_judicial": "Medida judicial",
+            "situacao": "Situação",
+            "observacoes": "Observações",
+        }
+        help_texts = {
+            "prioridade": "Selecione a prioridade conforme a regra do serviço.",
+            "medida_judicial": "Marque se há decisão judicial aplicável.",
+            "situacao": "Estado atual do paciente na fila.",
+            "observacoes": "Anotações internas/observações livres.",
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Aplica classes Tailwind nos widgets que ainda não têm
+        # Estiliza inputs padrão (Select/Char/etc.) com classes Tailwind
         for name, field in self.fields.items():
-            w = field.widget
-            if not getattr(w.attrs, "get", None):
+            if name in {"medida_judicial", "observacoes"}:
                 continue
-            css = w.attrs.get("class", "")
-            if isinstance(w, (forms.TextInput, forms.Textarea, forms.NumberInput, forms.Select, forms.DateInput, forms.DateTimeInput)):
-                w.attrs["class"] = (css + " w-full border rounded px-3 py-2").strip()
-            elif isinstance(w, (forms.CheckboxInput,)):
-                w.attrs["class"] = (css + " h-4 w-4").strip()
+            css = field.widget.attrs.get("class", "")
+            field.widget.attrs["class"] = (css + " w-full border rounded px-3 py-2").strip()
 
-        # Se for instância e estiver inativa, desabilita todos os campos
-        inst = getattr(self, "instance", None)
-        if inst and hasattr(inst, "ativo") and inst.ativo is False:
-            for f in self.fields.values():
-                f.disabled = True
+        # Padrão visual
+        if "medida_judicial" in self.fields and (self.initial.get("medida_judicial") is None):
+            self.initial["medida_judicial"] = False
 
-    class Meta(BaseListaEsperaForm.Meta):
-        # herda Meta, mas garante que widgets/tailwind sejam mantidos quando necessário
-        pass
+        # ---- POPULAR CHOICES DA ESPECIALIDADE PELA API ----
+        self.fields["especialidade_api"].choices = self._carregar_choices_especialidades()
+
+    # ---------------- helpers ----------------
+
+    def _carregar_choices_especialidades(self):
+        """
+        Busca especialidades na API e retorna como lista de (id, nome).
+        Tenta entender formatos comuns:
+          - lista simples: [{"COD_ESPECIALIDADE": ..., "NOME_ESPECIALIDADE": ...}, ...]
+          - paginado: {"results": [...]}
+          - nomes alternativos: {"id": ..., "nome": ...}
+        Se a API falhar, devolve uma opção de fallback.
+        """
+        base = getattr(settings, "API_BASE_URL", "").rstrip("/")
+        if not base:
+            return [("", "API_BASE_URL não configurada")]
+
+        url = f"{base}/especialidades"
+        try:
+            resp = requests.get(url, timeout=5)
+            resp.raise_for_status()
+            data = resp.json()
+
+            items = data.get("results", data) if isinstance(data, dict) else data
+            choices = [("", "Selecione...")]
+
+            for it in items:
+                # tenta vários nomes de campos
+                cod = (it.get("COD_ESPECIALIDADE")
+                       or it.get("cod_especialidade")
+                       or it.get("id")
+                       or it.get("codigo"))
+                nome = (it.get("NOME_ESPECIALIDADE")
+                        or it.get("nome_especialidade")
+                        or it.get("nome")
+                        or it.get("descricao"))
+
+                if cod is not None and nome:
+                    choices.append((str(cod), str(nome)))
+
+            if len(choices) == 1:
+                # nada compreensível
+                return [("", "Nenhuma especialidade disponível")]
+
+            return choices
+
+        except requests.RequestException as e:
+            # Log leve (você pode usar logging)
+            print(f"[PortalCreateFormLight] Falha ao buscar especialidades: {e}")
+            return [("", "Falha ao carregar especialidades")]

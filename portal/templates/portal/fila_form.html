@@ -1,32 +1,74 @@
 {% extends "portal/base_portal.html" %}
-{% block title %}{{ view.object|default_if_none:"Nova entrada" }} · Fila{% endblock %}
+{% load static %}
+
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-  <h1 class="text-2xl font-semibold">{{ view.object|default_if_none:"Nova entrada" }}</h1>
-  <a href="{% url 'portal:fila_list' %}" class="inline-flex items-center px-3 py-2 rounded border">Voltar</a>
+<div class="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow">
+  <h1 class="text-2xl font-semibold mb-6">
+    {% if form.instance.pk %}Editar Entrada{% else %}Nova Entrada{% endif %}
+  </h1>
+
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    {% for field in form.visible_fields %}
+      <div>
+        <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">
+          {{ field.label }}
+        </label>
+        {{ field }}
+        {% if field.help_text %}
+          <p class="text-gray-500 text-sm">{{ field.help_text }}</p>
+        {% endif %}
+        {% for error in field.errors %}
+          <p class="text-red-600 text-sm">{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endfor %}
+
+    <div class="flex space-x-2 pt-4">
+      <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white">
+        Salvar
+      </button>
+      <a href="{% url 'portal:fila_list' %}" class="px-4 py-2 rounded bg-gray-300 text-black">
+        Cancelar
+      </a>
+    </div>
+  </form>
 </div>
 
-{% if view.object and view.object.ativo is False %}
-  <div class="mb-4 rounded border border-amber-200 bg-amber-50 text-amber-800 p-3 text-sm">
-    Este registro está inativo — formulário somente visualização.
-  </div>
-{% endif %}
+<!-- assets do Select2 -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-<form method="post" class="bg-white border rounded-lg shadow-sm p-6 space-y-4">
-  {% csrf_token %}
-  {{ form.non_field_errors }}
+<script>
+$(function () {
+  const $esp = $('#id_especialidade_api');
 
-  {% for field in form.visible_fields %}
-    <div>
-      <label class="block text-sm font-medium mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-      {{ field }}
-      {% if field.help_text %}<p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>{% endif %}
-      {{ field.errors }}
-    </div>
-  {% endfor %}
-
-  {% if not view.object or view.object.ativo %}
-    <button class="bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700">Salvar</button>
-  {% endif %}
-</form>
+  if ($esp.length) {
+    $esp.select2({
+      placeholder: 'Digite para buscar especialidade…',
+      allowClear: true,
+      width: '100%',
+      ajax: {
+        url: "{% url 'fila_cirurgica:especialidade_api_autocomplete' %}",
+        dataType: 'json',
+        delay: 300,
+        data: params => ({
+            term: params.term,
+            page: params.page,
+            limit: 10,
+        }),
+        processResults: (data, params) => {
+            params.page = params.page || 1;
+            return {
+                results: data.results,
+                pagination: { more: data.pagination.more }
+            };
+        },
+        cache: true
+      }
+    });
+  }
+});
+</script>
 {% endblock %}

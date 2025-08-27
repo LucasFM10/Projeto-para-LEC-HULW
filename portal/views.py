@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 
 # Create your views here.
 from typing import Dict, Any, List, Tuple
@@ -10,9 +10,11 @@ from django.urls import reverse_lazy
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
+from django.views.generic import FormView
 
 # Importa seu modelo real
 from fila_cirurgica.models import ListaEsperaCirurgica
+from portal.forms import PortalCreateFormLight
 
 # Tenta reaproveitar o seu ModelForm oficial; cai para um fallback se não existir
 try:
@@ -130,10 +132,15 @@ class FilaDetailView(StaffRequiredMixin, PermissionRequiredMixin, DetailView):
 class FilaCreateView(StaffRequiredMixin, PermissionRequiredMixin, CreateView):
     permission_required = "fila_cirurgica.add_listaesperacirurgica"
     model = ListaEsperaCirurgica
-    form_class = BaseListaEsperaForm
+    form_class = PortalCreateFormLight           # <-- usa o ModelForm “enxuto”
     template_name = "portal/fila_form.html"
     success_url = reverse_lazy("portal:fila_list")
 
+    def form_valid(self, form):
+        # Aqui salva de verdade no banco
+        obj = form.save(commit=True)
+        messages.success(self.request, "Entrada criada com sucesso.")
+        return redirect(self.success_url)
 
 class FilaUpdateView(StaffRequiredMixin, PermissionRequiredMixin, UpdateView):
     permission_required = "fila_cirurgica.change_listaesperacirurgica"

@@ -7,6 +7,8 @@
     <title>{% block title %}Portal{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'dist/main.css' %}"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400" rel="stylesheet">
+    <!-- Select2 CSS (CDN) -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 
   <style>.material-symbols-outlined{vertical-align:middle}</style>
 </head>
@@ -37,5 +39,7 @@
   </main>
 
   <footer class="py-8 text-center text-xs text-gray-500">© {% now "Y" %} Portal</footer>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js"></script>
 </body>
 </html>
