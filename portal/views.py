@@ -1,218 +1,207 @@
-from django.shortcuts import render
+from __future__ import annotations
 
-# Create your views here.
-from typing import Dict, Any, List, Tuple
+from typing import Any, Dict
+
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin, PermissionRequiredMixin
+from django.urls import reverse_lazy
 from django.views.generic import TemplateView, DetailView, CreateView, UpdateView
 from django_filters.views import FilterView
-from django.contrib import messages
-from django.urls import reverse_lazy
-from django.db.models import Count
-from django.shortcuts import get_object_or_404
-from django.utils.timezone import now
 
-# Importa seu modelo real
 from fila_cirurgica.models import ListaEsperaCirurgica
+from fila_cirurgica.api_helpers import (
+    get_or_create_paciente,
+    get_or_create_procedimento,
+    get_or_create_especialidade,
+    get_or_create_profissional,
+)
+from simple_history.utils import update_change_reason
 
-# Tenta reaproveitar o seu ModelForm oficial; cai para um fallback se não existir
-try:
-    from fila_cirurgica.forms import ListaEsperaCirurgicaForm as BaseListaEsperaForm
-except Exception:
-    from django import forms
-
-    class BaseListaEsperaForm(forms.ModelForm):
-        """Fallback simples caso o form oficial não esteja disponível no import.
-        Ajuste fields/widgets conforme sua necessidade, evitando quebrar validações.
-        """
-        class Meta:
-            model = ListaEsperaCirurgica
-            fields = "__all__"
-            widgets = {
-                # Exemplo de widgets com classes Tailwind
-                # Ajuste conforme os nomes reais dos campos
-            }
-
-# Constantes para nomes de campos (fácil de ajustar se divergirem)
-CAMPO_ATIVO = "ativo"
-CAMPO_JUDICIAL = "medida_judicial"
-CAMPO_PRIORIDADE = "prioridade"
-CAMPO_DATA_ENTRADA = "data_entrada"
-REL_ESPECIALIDADE_NOME = "especialidade__nome_especialidade"
-REL_PROCEDIMENTO_NOME = "procedimento__nome"
-REL_MEDICO_NOME = "medico__nome"
-REL_PACIENTE_PRONTUARIO = "paciente__prontuario"
+from .forms import PortalListaEsperaForm
+from .filters import FilaFilter as FilaFilterSet
 
 
+# ---------- Mixins ----------
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
-    """Exige usuário autenticado e staff."""
     def test_func(self) -> bool:
-        return self.request.user.is_active and self.request.user.is_staff
+        return bool(self.request.user and self.request.user.is_staff)
 
 
+# ---------- Dashboard ----------
 class DashboardView(StaffRequiredMixin, PermissionRequiredMixin, TemplateView):
-    """Dashboard sem dados pessoais (apenas agregados)."""
-    permission_required = "fila_cirurgica.view_listaesperacirurgica"
     template_name = "portal/dashboard.html"
+    permission_required = "fila_cirurgica.view_listaesperacirurgica"
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         ctx = super().get_context_data(**kwargs)
-        qs = ListaEsperaCirurgica.objects.all()
-
-        total_ativos = qs.filter(**{CAMPO_ATIVO: True}).count()
-        total_especialidades = (
-            qs.exclude(especialidade__isnull=True)
-              .values("especialidade_id")
-              .distinct()
-              .count()
-        )
-        total_procedimentos = (
-            qs.exclude(procedimento__isnull=True)
-              .values("procedimento_id")
-              .distinct()
-              .count()
-        )
-        ctx.update({
-            "kpi_total_ativos": total_ativos,
-            "kpi_total_especialidades": total_especialidades,
-            "kpi_total_procedimentos": total_procedimentos,
-            "agora": now(),
-        })
+        qs = ListaEsperaCirurgica.objects.select_related("especialidade", "procedimento").filter(ativo=True)
+        ctx["indicadores"] = {
+            "na_fila": qs.count(),
+            "especialidades": qs.values("especialidade_id").distinct().count(),
+            "procedimentos": qs.values("procedimento_id").distinct().count(),
+        }
         return ctx
 
 
-from .filters import FilaFilter
-
-
+# ---------- List ----------
 class FilaListView(StaffRequiredMixin, PermissionRequiredMixin, FilterView):
-    """Lista com filtros e paginação."""
-    permission_required = "fila_cirurgica.view_listaesperacirurgica"
     model = ListaEsperaCirurgica
-    filterset_class = FilaFilter
-    paginate_by = 20
     template_name = "portal/fila_list.html"
     context_object_name = "objetos"
+    paginate_by = 20
+    permission_required = "fila_cirurgica.view_listaesperacirurgica"
+    filterset_class = FilaFilterSet
 
     def get_queryset(self):
-        # Otimiza relacionamentos para evitar N+1
         return (
-            ListaEsperaCirurgica.objects
-            .select_related("paciente", "especialidade", "procedimento", "medico")
-            .order_by("-" + CAMPO_DATA_ENTRADA)
+            ListaEsperaCirurgica.objects.select_related(
+                "paciente", "especialidade", "procedimento", "medico"
+            )
+            .all()
+            .order_by("-data_entrada")
         )
 
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx["hoje"] = now().date()
-        return ctx
 
-
-class FilaDetailView(StaffRequiredMixin, PermissionRequiredMixin, DetailView):
-    permission_required = "fila_cirurgica.view_listaesperacirurgica"
-    model = ListaEsperaCirurgica
-    template_name = "portal/fila_detail.html"
-    context_object_name = "obj"
-
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
-        ctx = super().get_context_data(**kwargs)
-        obj = ctx["obj"]
-
-        # Posição na fila (usa método se existir)
-        posicao = None
-        if hasattr(obj, "get_posicao") and callable(obj.get_posicao):
-            try:
-                posicao = obj.get_posicao()
-            except Exception:
-                posicao = None
-        ctx["posicao"] = posicao
-        return ctx
-
-
+# ---------- Create ----------
 class FilaCreateView(StaffRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = ListaEsperaCirurgica
+    template_name = "portal/fila_form.html"
     permission_required = "fila_cirurgica.add_listaesperacirurgica"
-    model = ListaEsperaCirurgica
-    form_class = BaseListaEsperaForm
-    template_name = "portal/fila_form.html"
+    form_class = PortalListaEsperaForm
     success_url = reverse_lazy("portal:fila_list")
-
-
-class FilaUpdateView(StaffRequiredMixin, PermissionRequiredMixin, UpdateView):
-    permission_required = "fila_cirurgica.change_listaesperacirurgica"
-    model = ListaEsperaCirurgica
-    form_class = BaseListaEsperaForm
-    template_name = "portal/fila_form.html"
-    success_url = reverse_lazy("portal:fila_list")
-
-    def get_form(self, *args, **kwargs):
-        form = super().get_form(*args, **kwargs)
-        obj = getattr(self, "object", None)
-        # Se inativo, torna read-only
-        if obj and not getattr(obj, CAMPO_ATIVO, True):
-            for f in form.fields.values():
-                f.disabled = True
-            messages.info(self.request, "Este registro está inativo — formulário em modo de visualização.")
-        return form
 
     def form_valid(self, form):
-        obj = form.instance
-        # Se inativo, não permite salvar mudanças
-        if obj and not getattr(obj, CAMPO_ATIVO, True):
-            messages.warning(self.request, "Registro inativo. Alterações não foram salvas.")
+        inst = form.instance
+
+        # IDs vindos do template
+        prontuario = form.cleaned_data.get("prontuario")
+        esp_id = form.cleaned_data.get("especialidade_id") or None
+        proc_id = form.cleaned_data.get("procedimento_id") or None
+        med_mat = form.cleaned_data.get("medico_matricula") or None
+
+        try:
+            inst.paciente = get_or_create_paciente(prontuario)
+            if esp_id:
+                inst.especialidade = get_or_create_especialidade(esp_id)
+            if proc_id:
+                inst.procedimento = get_or_create_procedimento(proc_id)
+            if med_mat:
+                inst.medico = get_or_create_profissional(med_mat)
+        except Exception as e:
+            form.add_error(None, f"Falha ao contatar a API: {e}")
             return self.form_invalid(form)
-        return super().form_valid(form)
+
+        # histórico
+        inst._history_user = self.request.user
+        resp = super().form_valid(form)
+        reason = form.cleaned_data.get("change_reason")
+        if reason:
+            update_change_reason(self.object, reason)
+
+        messages.success(self.request, "Entrada criada com sucesso.")
+        return resp
 
 
-class FilaHistoryView(StaffRequiredMixin, PermissionRequiredMixin, TemplateView):
-    """Histórico estilo admin usando django-simple-history."""
+# ---------- Update ----------
+class FilaUpdateView(StaffRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = ListaEsperaCirurgica
+    template_name = "portal/fila_form.html"
+    permission_required = "fila_cirurgica.change_listaesperacirurgica"
+    form_class = PortalListaEsperaForm
+    success_url = reverse_lazy("portal:fila_list")
+
+    def get_initial(self):
+        init = super().get_initial()
+        obj = self.get_object()
+        if getattr(obj, "paciente", None) and getattr(obj.paciente, "prontuario", None):
+            init["prontuario"] = obj.paciente.prontuario
+        if getattr(obj, "especialidade_id", None):
+            init["especialidade_id"] = str(obj.especialidade_id)
+        if getattr(obj, "procedimento_id", None):
+            init["procedimento_id"] = str(obj.procedimento_id)
+        if getattr(obj, "medico", None) and getattr(obj.medico, "matricula", None):
+            init["medico_matricula"] = str(obj.medico.matricula)
+        return init
+
+    def form_valid(self, form):
+        # Se inativo, apenas bloqueia salvar (UI já desabilita, mas garantimos aqui)
+        if self.object and getattr(self.object, "ativo", True) is False:
+            messages.warning(self.request, "Registro inativo — alterações não foram salvas.")
+            return self.form_invalid(form)
+
+        inst = form.instance
+        prontuario = form.cleaned_data.get("prontuario")
+        esp_id = form.cleaned_data.get("especialidade_id") or None
+        proc_id = form.cleaned_data.get("procedimento_id") or None
+        med_mat = form.cleaned_data.get("medico_matricula") or None
+
+        try:
+            if prontuario:
+                inst.paciente = get_or_create_paciente(prontuario)
+            if esp_id:
+                inst.especialidade = get_or_create_especialidade(esp_id)
+            if proc_id:
+                inst.procedimento = get_or_create_procedimento(proc_id)
+            if med_mat:
+                inst.medico = get_or_create_profissional(med_mat)
+        except Exception as e:
+            form.add_error(None, f"Falha ao contatar a API: {e}")
+            return self.form_invalid(form)
+
+        inst._history_user = self.request.user
+        resp = super().form_valid(form)
+        reason = form.cleaned_data.get("change_reason")
+        if reason:
+            update_change_reason(self.object, reason)
+
+        messages.success(self.request, "Entrada atualizada com sucesso.")
+        return resp
+
+
+# ---------- Detail ----------
+class FilaDetailView(StaffRequiredMixin, PermissionRequiredMixin, DetailView):
+    model = ListaEsperaCirurgica
+    template_name = "portal/fila_detail.html"
     permission_required = "fila_cirurgica.view_listaesperacirurgica"
+
+
+# ---------- History ----------
+class FilaHistoryView(StaffRequiredMixin, PermissionRequiredMixin, DetailView):
+    model = ListaEsperaCirurgica
     template_name = "portal/fila_history.html"
+    permission_required = "fila_cirurgica.view_listaesperacirurgica"
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         ctx = super().get_context_data(**kwargs)
-        pk = self.kwargs.get("pk")
-        obj = get_object_or_404(
-            ListaEsperaCirurgica.objects.select_related("paciente", "especialidade", "procedimento", "medico"),
-            pk=pk
-        )
-        history = obj.history.all().select_related("history_user").order_by("-history_date")
+        obj = self.object
+        history = obj.history.select_related("history_user").order_by("-history_date")
 
-        # Constrói linhas com diff amigável (comparando com o registro anterior)
-        linhas = []
+        def diff_fields(prev, curr):
+            diffs = []
+            if not prev:
+                return diffs
+            for field in [
+                "prioridade", "medida_judicial", "situacao", "observacoes",
+                "data_novo_contato", "ativo", "motivo_saida",
+                "paciente_id", "especialidade_id", "procedimento_id", "medico_id",
+            ]:
+                try:
+                    if getattr(prev, field) != getattr(curr, field):
+                        diffs.append((field, getattr(prev, field), getattr(curr, field)))
+                except Exception:
+                    continue
+            return diffs
+
+        rows = []
         prev = None
         for h in history:
-            diffs: List[Tuple[str, Any, Any]] = []
-            if prev:
-                diffs = self._diff_records(prev, h)
-            linhas.append({
-                "data": h.history_date,
-                "usuario": getattr(h, "history_user", None),
-                "tipo": {"+" : "Criado", "~": "Alterado", "-" : "Deletado"}.get(h.history_type, h.history_type),
-                "motivo": getattr(h, "history_change_reason", "") or getattr(h, "change_reason", ""),
-                "diffs": diffs,
+            rows.append({
+                "date": h.history_date,
+                "user": getattr(h.history_user, "get_username", lambda: None)() if h.history_user else "—",
+                "type": getattr(h, "get_history_type_display", lambda: h.history_type)(),
+                "reason": getattr(h, "history_change_reason", "") or "",
+                "diffs": diff_fields(prev, h),
             })
             prev = h
-        ctx.update({"obj": obj, "linhas": linhas})
+        ctx["history_rows"] = rows
         return ctx
-
-    def _diff_records(self, old, new) -> List[Tuple[str, Any, Any]]:
-        """Compara campos simples, incluindo FK por string, e retorna lista (campo, antes, depois)."""
-        diffs = []
-        model = new.instance._meta
-        # ignora campos de controle do simple_history
-        ignore = {"id", "history_id", "history_date", "history_type", "history_user", "history_change_reason"}
-        for field in model.fields:
-            name = field.name
-            if name in ignore:
-                continue
-            try:
-                before = getattr(old, name, None)
-                after = getattr(new, name, None)
-                # Converte FKs para string amigável
-                if getattr(field, "many_to_one", False) and hasattr(field, "remote_field"):
-                    before = str(before) if before is not None else ""
-                    after = str(after) if after is not None else ""
-                if before != after:
-                    diffs.append((name, before, after))
-            except Exception:
-                # Falha silenciosa em campo problemático
-                continue
-        return diffs

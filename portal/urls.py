@@ -1,28 +1,18 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
-from .views import (
-    DashboardView,
-    FilaListView,
-    FilaCreateView,
-    FilaDetailView,
-    FilaUpdateView,
-    FilaHistoryView,
-)
+from . import views
 
 app_name = "portal"
 
 urlpatterns = [
-    # Autenticação (usa templates do portal)
     path("login/",  auth_views.LoginView.as_view(template_name="portal/login.html"), name="login"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
 
-    # Dashboard
-    path("", DashboardView.as_view(), name="dashboard"),
+    path("", views.DashboardView.as_view(), name="dashboard"),
 
-    # Fila (ListaEsperaCirurgica)
-    path("fila/", FilaListView.as_view(), name="fila_list"),
-    path("fila/nova/", FilaCreateView.as_view(), name="fila_create"),
-    path("fila/<int:pk>/", FilaDetailView.as_view(), name="fila_detail"),
-    path("fila/<int:pk>/editar/", FilaUpdateView.as_view(), name="fila_update"),
-    path("fila/<int:pk>/historico/", FilaHistoryView.as_view(), name="fila_history"),
+    path("fila/", views.FilaListView.as_view(), name="fila_list"),
+    path("fila/nova/", views.FilaCreateView.as_view(), name="fila_create"),
+    path("fila/<int:pk>/", views.FilaDetailView.as_view(), name="fila_detail"),
+    path("fila/<int:pk>/editar/", views.FilaUpdateView.as_view(), name="fila_update"),
+    path("fila/<int:pk>/historico/", views.FilaHistoryView.as_view(), name="fila_history"),
 ]

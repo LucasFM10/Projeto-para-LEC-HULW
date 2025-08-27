@@ -1,9 +1,11 @@
 {% extends "portal/base_portal.html" %}
-{% block title %}{{ view.object|default_if_none:"Nova entrada" }} · Fila{% endblock %}
+{% load static %}
+{% block title %}{% if view.object %}Editar{% else %}Nova entrada{% endif %} · Fila{% endblock %}
+
 {% block content %}
 <div class="flex items-center justify-between mb-6">
-  <h1 class="text-2xl font-semibold">{{ view.object|default_if_none:"Nova entrada" }}</h1>
-  <a href="{% url 'portal:fila_list' %}" class="inline-flex items-center px-3 py-2 rounded border">Voltar</a>
+  <h1 class="text-2xl font-semibold">{% if view.object %}Editar{% else %}Nova entrada{% endif %}</h1>
+  <a href="{% url 'portal:fila_list' %}" class="inline-flex items-center px-3 py-2 rounded border hover:bg-gray-50">Voltar</a>
 </div>
 
 {% if view.object and view.object.ativo is False %}
@@ -12,21 +14,206 @@
   </div>
 {% endif %}
 
-<form method="post" class="bg-white border rounded-lg shadow-sm p-6 space-y-4">
+<form method="post" class="bg-white border rounded-lg shadow-sm p-6 space-y-6" id="fila-form">
   {% csrf_token %}
   {{ form.non_field_errors }}
 
-  {% for field in form.visible_fields %}
+  <!-- CATÁLOGOS (consomem API) -->
+  <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Especialidade -->
     <div>
-      <label class="block text-sm font-medium mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-      {{ field }}
-      {% if field.help_text %}<p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>{% endif %}
-      {{ field.errors }}
+      <label class="block text-sm font-medium mb-2">Especialidade</label>
+      <div class="relative">
+        <input id="esp_input" type="text" class="w-full border rounded px-3 py-2" placeholder="Digite para buscar..." autocomplete="off">
+        <ul id="esp_results" class="absolute z-10 mt-1 w-full bg-white shadow border rounded hidden max-h-60 overflow-auto"></ul>
+      </div>
+      <p class="text-xs text-gray-500 mt-1">
+        Pesquise e selecione uma especialidade. Atual: 
+        <strong>{% if view.object and view.object.especialidade %}{{ view.object.especialidade }}{% else %}—{% endif %}</strong>
+      </p>
+      {{ form.especialidade_id }}
     </div>
-  {% endfor %}
+
+    <!-- Procedimento -->
+    <div>
+      <label class="block text-sm font-medium mb-2">Procedimento</label>
+      <div class="relative">
+        <input id="proc_input" type="text" class="w-full border rounded px-3 py-2" placeholder="Selecione uma especialidade primeiro" autocomplete="off" disabled>
+        <ul id="proc_results" class="absolute z-10 mt-1 w-full bg-white shadow border rounded hidden max-h-60 overflow-auto"></ul>
+      </div>
+      <p class="text-xs text-gray-500 mt-1">
+        O procedimento depende da especialidade. Atual:
+        <strong>{% if view.object and view.object.procedimento %}{{ view.object.procedimento }}{% else %}—{% endif %}</strong>
+      </p>
+      {{ form.procedimento_id }}
+    </div>
+
+    <!-- Paciente -->
+    <div>
+      <label class="block text-sm font-medium mb-1" for="{{ form.prontuario.id_for_label }}">Prontuário do Paciente</label>
+      {{ form.prontuario }}
+      <p class="text-xs text-gray-500 mt-1">Digite o número do prontuário.</p>
+      {{ form.prontuario.errors }}
+    </div>
+
+    <!-- Médico (opcional) -->
+    <div>
+      <label class="block text-sm font-medium mb-2">Médico (opcional)</label>
+      <div class="relative">
+        <input id="med_input" type="text" class="w-full border rounded px-3 py-2" placeholder="Digite para buscar..." autocomplete="off">
+        <ul id="med_results" class="absolute z-10 mt-1 w-full bg-white shadow border rounded hidden max-h-60 overflow-auto"></ul>
+      </div>
+      <p class="text-xs text-gray-500 mt-1">
+        Atual:
+        <strong>{% if view.object and view.object.medico %}{{ view.object.medico }}{% else %}—{% endif %}</strong>
+      </p>
+      {{ form.medico_matricula }}
+    </div>
+  </section>
+
+  <hr class="my-4">
+
+  <!-- CAMPOS DO MODELO -->
+  <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <label class="block text-sm font-medium mb-1" for="{{ form.prioridade.id_for_label }}">{{ form.prioridade.label }}</label>
+      {{ form.prioridade }} {{ form.prioridade.errors }}
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1" for="{{ form.medida_judicial.id_for_label }}">{{ form.medida_judicial.label }}</label>
+      {{ form.medida_judicial }} {{ form.medida_judicial.errors }}
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1" for="{{ form.situacao.id_for_label }}">{{ form.situacao.label }}</label>
+      {{ form.situacao }} {{ form.situacao.errors }}
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1" for="{{ form.data_novo_contato.id_for_label }}">{{ form.data_novo_contato.label }}</label>
+      {{ form.data_novo_contato }} {{ form.data_novo_contato.errors }}
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-sm font-medium mb-1" for="{{ form.observacoes.id_for_label }}">{{ form.observacoes.label }}</label>
+      {{ form.observacoes }} {{ form.observacoes.errors }}
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-sm font-medium mb-1" for="{{ form.change_reason.id_for_label }}">{{ form.change_reason.label }}</label>
+      {{ form.change_reason }}
+    </div>
+  </section>
 
   {% if not view.object or view.object.ativo %}
-    <button class="bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700">Salvar</button>
+  <div class="flex justify-end gap-3">
+    <a href="{% url 'portal:fila_list' %}" class="px-4 py-2 rounded border">Cancelar</a>
+    <button type="submit" class="bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700">Salvar</button>
+  </div>
   {% endif %}
 </form>
+
+<!-- Autocomplete leve (sem libs externas) -->
+<script>
+(function(){
+  const ESP_URL  = "{% url 'fila_cirurgica:especialidade_api_autocomplete' %}";
+  const PROC_URL = "{% url 'fila_cirurgica:procedimento_api_autocomplete' %}";
+  const MED_URL  = "{% url 'fila_cirurgica:medico_api_autocomplete' %}";
+
+  const $ = (sel) => document.querySelector(sel);
+  const hiddenEsp  = $("#id_especialidade_id");
+  const hiddenProc = $("#id_procedimento_id");
+  const hiddenMed  = $("#id_medico_matricula");
+
+  function dropdown(input, list, fetcher, onSelect){
+    let lastTerm = "";
+    input.addEventListener("input", async () => {
+      const term = input.value.trim();
+      lastTerm = term;
+      if (term.length < 2) { list.classList.add("hidden"); list.innerHTML=""; return; }
+
+      const items = await fetcher(term);
+      if (lastTerm !== term) return; // evita condição de corrida
+
+      list.innerHTML = items.map(i => `
+        <li data-id="${i.id}" class="px-3 py-2 hover:bg-gray-50 cursor-pointer">${i.text}</li>
+      `).join("");
+      list.classList.toggle("hidden", items.length === 0);
+    });
+
+    list.addEventListener("click", (e) => {
+      const li = e.target.closest("li[data-id]");
+      if (!li) return;
+      const id = li.getAttribute("data-id");
+      const label = li.textContent;
+      onSelect(id, label);
+      list.classList.add("hidden");
+      input.value = label;
+    });
+
+    // Fecha ao clicar fora
+    document.addEventListener("click", (e) => {
+      if (!list.contains(e.target) && e.target !== input) {
+        list.classList.add("hidden");
+      }
+    });
+  }
+
+  async function getJSON(url, params){
+    const qs = new URLSearchParams(params || {});
+    const r = await fetch(url + "?" + qs.toString());
+    if (!r.ok) return { results: [] };
+    return r.json();
+  }
+
+  // Especialidade
+  const espInput = $("#esp_input");
+  const espList  = $("#esp_results");
+  dropdown(
+    espInput, espList,
+    async (term) => (await getJSON(ESP_URL, { term })).results || [],
+    (id, label) => {
+      hiddenEsp.value = id;
+
+      // Habilita proc
+      $("#proc_input").disabled = false;
+      $("#proc_input").placeholder = "Digite para buscar...";
+      // limpa proc atual
+      hiddenProc.value = "";
+      $("#proc_results").innerHTML = "";
+      $("#proc_results").classList.add("hidden");
+      $("#proc_input").value = "";
+    }
+  );
+
+  // Procedimento depende de especialidade
+  const procInput = $("#proc_input");
+  const procList  = $("#proc_results");
+  dropdown(
+    procInput, procList,
+    async (term) => {
+      const esp = hiddenEsp.value;
+      if (!esp) return [];
+      const data = await getJSON(PROC_URL, { term, especialidade_id: esp });
+      return data.results || [];
+    },
+    (id, label) => { hiddenProc.value = id; }
+  );
+
+  // Médico
+  const medInput = $("#med_input");
+  const medList  = $("#med_results");
+  dropdown(
+    medInput, medList,
+    async (term) => (await getJSON(MED_URL, { term })).results || [],
+    (id, label) => { hiddenMed.value = id; }
+  );
+
+  // Se veio valor inicial (edição), mostre nos inputs
+  if (hiddenEsp.value)  espInput.value  = espInput.value  || "Selecionada (mantenha ou pesquise outra)";
+  if (hiddenProc.value) procInput.value = procInput.value || "Selecionado (mantenha ou pesquise outro)";
+  if (hiddenMed.value)  medInput.value  = medInput.value  || "Selecionado (mantenha ou pesquise outro)";
+
+  // Desabilita proc se não houver especialidade
+  if (!hiddenEsp.value) {
+    procInput.disabled = true;
+  }
+})();
+</script>
 {% endblock %}
