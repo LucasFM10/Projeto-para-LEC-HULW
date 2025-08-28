@@ -14,13 +14,12 @@ def api_autocomplete_proxy(request, api_endpoint, id_field, text_format_str):
         params['limit'] = limit
 
     try:
-        print("sfad")
         response = requests.get(f"{settings.API_BASE_URL}/{api_endpoint}/", params=params)
         response.raise_for_status()
         api_data = response.json()
 
         results = [
-            {"id": item[id_field], "text": text_format_str.format(**item)}
+            {"id": str(item[id_field]), "text": text_format_str.format(**item)}
             for item in api_data
         ]
         more = str(len(results)) == params.get('limit', 25)
@@ -36,7 +35,7 @@ def api_autocomplete_procedimento(request,
                                   id_field='COD_PROCEDIMENTO',
                                   text_format_str='{COD_PROCEDIMENTO} - {PROCEDIMENTO}',
                                   especialidade_param='cod_especialidade',
-                                  limit=25,
+                                  limit=5,
                                   timeout=10):
     """
     Proxy autocomplete específico para PROCEDIMENTOS que:

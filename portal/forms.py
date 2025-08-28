@@ -1,16 +1,48 @@
 # portal/forms.py
+from __future__ import annotations
+
 from django import forms
-from django.conf import settings            # <-- novo
-import requests                              # <-- novo
+from fila_cirurgica.api_helpers import (
+    get_or_create_especialidade,
+    get_or_create_paciente,
+    get_or_create_procedimento,
+    get_or_create_profissional,
+)
 from fila_cirurgica.models import ListaEsperaCirurgica
 
+
 class PortalCreateFormLight(forms.ModelForm):
-    # ---- CAMPO NOVO (fake, só para exibir opções vindas da API) ----
+    """
+    Form de criação leve para LEC.
+    Os campos *_api são "fakes" (IDs vindos da API por AJAX) para popular os FKs reais
+    (paciente, especialidade, procedimento, medico) no save().
+    """
+
+    # --- Campos "fake" controlados pelo front (Select2/AJAX) ---
     especialidade_api = forms.ChoiceField(
         label="Especialidade",
+        required=False,
+        choices=[("", "Digite para buscar…")],
+        widget=forms.Select(attrs={"id": "id_especialidade_api"}),
+    )
+    procedimento_api = forms.ChoiceField(
+        label="Procedimento",
         required=True,
         choices=[("", "Digite para buscar…")],
-        widget=forms.Select(attrs={"id": "id_especialidade_api"})
+        widget=forms.Select(attrs={"id": "id_procedimento_api"}),
+    )
+    medico_api = forms.ChoiceField(
+        label="Médico",
+        required=True,
+        choices=[("", "Digite para buscar…")],
+        widget=forms.Select(attrs={"id": "id_medico_api"}),
+    )
+
+    prontuario = forms.ChoiceField(
+        label="Prontuário",
+        required=True,
+        choices=[("", "Digite para buscar…")],
+        widget=forms.Select(attrs={"id": "id_prontuario"}),
     )
 
     class Meta:
@@ -18,10 +50,9 @@ class PortalCreateFormLight(forms.ModelForm):
         fields = ["prioridade", "medida_judicial", "situacao", "observacoes"]
         widgets = {
             "medida_judicial": forms.CheckboxInput(attrs={"class": "h-4 w-4"}),
-            "observacoes": forms.Textarea(attrs={
-                "rows": 4, "placeholder": "Observações gerais…",
-                "class": "w-full border rounded px-3 py-2",
-            }),
+            "observacoes": forms.Textarea(
+                attrs={"rows": 4, "placeholder": "Observações…", "class": "w-full border rounded px-3 py-2"}
+            ),
         }
         labels = {
             "prioridade": "Prioridade",
@@ -36,68 +67,95 @@ class PortalCreateFormLight(forms.ModelForm):
             "observacoes": "Anotações internas/observações livres.",
         }
 
-    def __init__(self, *args, **kwargs):
+    # ------------------------------
+    # Inicialização e ajustes de UI
+    # ------------------------------
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        # Estiliza inputs padrão (Select/Char/etc.) com classes Tailwind
+        def _ensure_choice(field_name: str) -> None:
+            """
+            Garante que o valor postado exista em `choices` para o Django validar.
+            Sem isso, o POST '17' cai em "Faça uma escolha válida" porque o select
+            é carregado por AJAX e o form não tem a lista no server-side.
+            """
+            field = self.fields[field_name]
+            value = self.data.get(field_name) or self.initial.get(field_name)
+            if not value:
+                return
+
+            # Opcional: se o front enviar também o label, aceitamos via *_text
+            label = self.data.get(f"{field_name}_text") or str(value)
+
+            # Evita duplicado e injeta o par (valor, rótulo)
+            if not any(str(value) == str(v) for v, _ in field.choices):
+                field.choices = list(field.choices) + [(str(value), label)]
+
+        for name in ("especialidade_api", "procedimento_api", "medico_api", "prontuario"):
+            _ensure_choice(name)
+
+        # Estilo padrão Tailwind (evita repetir classes em cada field)
         for name, field in self.fields.items():
             if name in {"medida_judicial", "observacoes"}:
                 continue
-            css = field.widget.attrs.get("class", "")
-            field.widget.attrs["class"] = (css + " w-full border rounded px-3 py-2").strip()
+            current = field.widget.attrs.get("class", "")
+            field.widget.attrs["class"] = (current + " w-full border rounded px-3 py-2").strip()
 
-        # Padrão visual
-        if "medida_judicial" in self.fields and (self.initial.get("medida_judicial") is None):
+        # Valor visual padrão (não altera regra de negócio)
+        if "medida_judicial" in self.fields and self.initial.get("medida_judicial") is None:
             self.initial["medida_judicial"] = False
 
-        # ---- POPULAR CHOICES DA ESPECIALIDADE PELA API ----
-        self.fields["especialidade_api"].choices = self._carregar_choices_especialidades()
+        # Ordem mais amigável no formulário
+        desired_order = [
+            "especialidade_api",
+            "procedimento_api",
+            "medico_api",
+            "prontuario",
+            "medida_judicial",
+            "situacao",
+            "prioridade",
+            "observacoes",
+        ]
+        # Só reordena os que existem
+        self.order_fields([f for f in desired_order if f in self.fields])
 
-    # ---------------- helpers ----------------
+    # ------------------------------
+    # Validação
+    # ------------------------------
+    def clean(self) -> dict:
+        cleaned = super().clean()
+        required = ("especialidade_api", "procedimento_api", "medico_api", "prontuario")
+        missing = [r for r in required if not cleaned.get(r)]
+        if missing:
+            raise forms.ValidationError("Preencha todos os campos obrigatórios.")
+        return cleaned
 
-    def _carregar_choices_especialidades(self):
+    # ------------------------------
+    # Persistência
+    # ------------------------------
+    def save(self, commit: bool = True) -> ListaEsperaCirurgica:
         """
-        Busca especialidades na API e retorna como lista de (id, nome).
-        Tenta entender formatos comuns:
-          - lista simples: [{"COD_ESPECIALIDADE": ..., "NOME_ESPECIALIDADE": ...}, ...]
-          - paginado: {"results": [...]}
-          - nomes alternativos: {"id": ..., "nome": ...}
-        Se a API falhar, devolve uma opção de fallback.
+        Mapeia os IDs vindos dos campos *_api para os FKs reais do modelo via helpers
+        e então salva a instância.
         """
-        base = getattr(settings, "API_BASE_URL", "").rstrip("/")
-        if not base:
-            return [("", "API_BASE_URL não configurada")]
+        instance: ListaEsperaCirurgica = super().save(commit=False)
 
-        url = f"{base}/especialidades"
-        try:
-            resp = requests.get(url, timeout=5)
-            resp.raise_for_status()
-            data = resp.json()
+        prontuario = self.cleaned_data["prontuario"].strip()
+        esp_id = str(self.cleaned_data["especialidade_api"])
+        proc_id = str(self.cleaned_data["procedimento_api"])
+        med_id = str(self.cleaned_data["medico_api"])
 
-            items = data.get("results", data) if isinstance(data, dict) else data
-            choices = [("", "Selecione...")]
+        # Helpers: buscam/criam registros locais a partir de IDs externos
+        paciente = get_or_create_paciente(prontuario=prontuario)
+        especialidade = get_or_create_especialidade(esp_id)
+        procedimento = get_or_create_procedimento(proc_id)
+        medico = get_or_create_profissional(med_id)
 
-            for it in items:
-                # tenta vários nomes de campos
-                cod = (it.get("COD_ESPECIALIDADE")
-                       or it.get("cod_especialidade")
-                       or it.get("id")
-                       or it.get("codigo"))
-                nome = (it.get("NOME_ESPECIALIDADE")
-                        or it.get("nome_especialidade")
-                        or it.get("nome")
-                        or it.get("descricao"))
+        instance.paciente = paciente
+        instance.especialidade = especialidade
+        instance.procedimento = procedimento
+        instance.medico = medico
 
-                if cod is not None and nome:
-                    choices.append((str(cod), str(nome)))
-
-            if len(choices) == 1:
-                # nada compreensível
-                return [("", "Nenhuma especialidade disponível")]
-
-            return choices
-
-        except requests.RequestException as e:
-            # Log leve (você pode usar logging)
-            print(f"[PortalCreateFormLight] Falha ao buscar especialidades: {e}")
-            return [("", "Falha ao carregar especialidades")]
+        if commit:
+            instance.save()
+        return instance

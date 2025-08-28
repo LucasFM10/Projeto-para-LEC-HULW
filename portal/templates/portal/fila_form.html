@@ -6,9 +6,10 @@
   <h1 class="text-2xl font-semibold mb-6">
     {% if form.instance.pk %}Editar Entrada{% else %}Nova Entrada{% endif %}
   </h1>
-
-  <form method="post" class="space-y-4">
+  
+  <form method="post" class="space-y-4" id="lec-form" novalidate>
     {% csrf_token %}
+  
     {% for field in form.visible_fields %}
       <div>
         <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">
@@ -23,27 +24,31 @@
         {% endfor %}
       </div>
     {% endfor %}
-
+  
     <div class="flex space-x-2 pt-4">
-      <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white">
+      <button type="submit" id="btn-submit" class="px-4 py-2 rounded bg-blue-600 text-white">
         Salvar
       </button>
       <a href="{% url 'portal:fila_list' %}" class="px-4 py-2 rounded bg-gray-300 text-black">
         Cancelar
       </a>
     </div>
-  </form>
+  </form>  
 </div>
+
+<style>
+  .field-error{font-size:.875rem;color:#dc2626;margin-top:.25rem}
+  .error-ring{border-color:#dc2626!important;box-shadow:0 0 0 1px #dc2626 inset!important}
+  .select2-container.error .select2-selection{border-color:#dc2626!important;box-shadow:0 0 0 1px #dc2626 inset!important}
+</style>
 
 <!-- assets do Select2 -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
 $(function () {
+  // --------- ESPECIALIDADE ----------
   const $esp = $('#id_especialidade_api');
-
   if ($esp.length) {
     $esp.select2({
       placeholder: 'Digite para buscar especialidade…',
@@ -54,21 +59,249 @@ $(function () {
         dataType: 'json',
         delay: 300,
         data: params => ({
-            term: params.term,
-            page: params.page,
-            limit: 10,
+          term: params.term,
+          page: params.page || 1,
+          limit: 10
         }),
         processResults: (data, params) => {
-            params.page = params.page || 1;
-            return {
-                results: data.results,
-                pagination: { more: data.pagination.more }
-            };
+          params.page = params.page || 1;
+          return {
+            results: data.results,
+            pagination: { more: data.pagination.more }
+          };
         },
         cache: true
+      },
+      language: {
+        noResults: () => 'Nenhuma especialidade encontrada.'
       }
     });
   }
+
+  // --------- MÉDICO (PROFISSIONAIS) ----------
+  const $med = $('#id_medico_api');
+  if ($med.length) {
+    $med.select2({
+      placeholder: 'Digite para buscar médico…',
+      allowClear: true,
+      width: '100%',
+      ajax: {
+        url: "{% url 'fila_cirurgica:medico_api_autocomplete' %}",
+        dataType: 'json',
+        delay: 300,
+        data: params => ({
+          term: params.term,
+          page: params.page || 1,
+          limit: 10
+        }),
+        processResults: (data, params) => {
+          params.page = params.page || 1;
+          return {
+            results: data.results,
+            pagination: { more: data.pagination.more }
+          };
+        },
+        cache: true
+      },
+      language: {
+        noResults: () => 'Nenhum médico encontrado.'
+      }
+    });
+  }
+
+  // --------- PROCEDIMENTO (dependente da ESPECIALIDADE) ----------
+  const $proc = $('#id_procedimento_api');
+
+  // helper: liga/desliga o select de procedimento
+  function setProcEnabled(enabled) {
+    $proc.prop('disabled', !enabled);          // desabilita o <select>
+    $proc.trigger('change.select2');           // avisa o Select2
+    const ph = enabled
+      ? 'Digite para buscar procedimento…'
+      : 'Selecione uma especialidade primeiro…';
+    $proc.data('select2')?.$container.find('.select2-selection__placeholder').text(ph);
+  }
+
+  if ($proc.length) {
+    const initProc = () => {
+      $proc.select2({
+        placeholder: 'Selecione uma especialidade primeiro…',
+        allowClear: true,
+        width: '100%',
+        ajax: {
+          url: "{% url 'fila_cirurgica:procedimento_api_autocomplete' %}",
+          dataType: 'json',
+          delay: 300,
+          // Só envia requisição se houver especialidade escolhida
+          transport: function (params, success, failure) {
+            const espVal = $esp.val();
+            if (!espVal) {
+              // bloqueia buscas sem especialidade
+              return null;
+            }
+            return $.ajax(params).then(success).catch(failure);
+          },
+          data: params => ({
+            term: params.term,
+            page: params.page || 1,
+            limit: 10,
+            especialidade_id: $esp.val() || ''   // filtra no backend
+          }),
+          processResults: (data, params) => {
+            params.page = params.page || 1;
+            return {
+              results: data.results,
+              pagination: { more: data.pagination.more }
+            };
+          },
+          cache: true
+        },
+        language: {
+          noResults: () => {
+            return $esp.val()
+              ? 'Nenhum procedimento encontrado para esta especialidade.'
+              : 'Selecione uma especialidade primeiro…';
+          }
+        }
+      });
+
+      // estado inicial: desabilitado se não houver especialidade; habilita se já vier selecionada (edição)
+      setProcEnabled(!!$esp.val());
+    };
+
+    initProc();
+
+    // Quando mudar a especialidade: limpa, desabilita/habilita e reinicializa o Select2 (para “pegar” o novo filtro)
+    $esp.on('change', function () {
+      // Limpa valor atual
+      $proc.val(null).trigger('change');
+
+      // Destrói e recria para garantir que o AJAX use o novo param
+      $proc.select2('destroy');
+      initProc();
+
+      // Habilita somente se houver especialidade
+      setProcEnabled(!!$esp.val());
+    });
+  }
+
+  // --------- PRONTUÁRIO ----------
+  const $pac = $('#id_prontuario');
+  if ($pac.length) {
+    $pac.select2({
+      placeholder: 'Digite nº ou nome do paciente…',
+      allowClear: true,
+      width: '100%',
+      ajax: {
+        url: "{% url 'fila_cirurgica:paciente_api_autocomplete' %}",
+        dataType: 'json',
+        delay: 300,
+        data: params => ({
+          term: params.term,
+          page: params.page || 1,
+          limit: 10
+        }),
+        processResults: (data, params) => {
+          params.page = params.page || 1;
+          return {
+            results: data.results, // [{id: "123456", text: "123456 — Maria da Silva"}]
+            pagination: { more: data.pagination.more }
+          };
+        },
+        cache: true
+      },
+      language: {
+        noResults: () => 'Nenhum paciente encontrado.'
+      }
+    });
+  }
+
+  // ============================================================
+  // Validação customizada (auto a partir de [required])
+  // ============================================================
+  function clearErrorFor($el){
+    if($el.hasClass('select2-hidden-accessible')){
+      $el.next('.select2-container').removeClass('error');
+      $el.next('.select2-container').next('.field-error').remove();
+    }else{
+      $el.removeClass('error-ring');
+      $el.next('.field-error').remove();
+    }
+  }
+  function showError($el,msg){
+    if($el.hasClass('select2-hidden-accessible')){
+      const $cont = $el.next('.select2-container');
+      $cont.addClass('error');
+      if($cont.next('.field-error').length===0){
+        $('<p class="field-error">'+msg+'</p>').insertAfter($cont);
+      }
+    }else{
+      $el.addClass('error-ring');
+      if($el.next('.field-error').length===0){
+        $('<p class="field-error">'+msg+'</p>').insertAfter($el);
+      }
+    }
+  }
+  function clearAllErrors(){
+    $('.error-ring').removeClass('error-ring');
+    $('.select2-container.error').removeClass('error');
+    $('.field-error').remove();
+  }
+
+  function getRequiredFields() {
+    // pega inputs/selects/textarea com required dentro do form e ignora desabilitados
+    return $('#lec-form')
+      .find('select[required], input[required], textarea[required]')
+      .filter(function(){ return !this.disabled; });
+  }
+  function isEmptyField($el) {
+    if ($el.is(':checkbox')) return !$el.is(':checked');
+    if ($el.is(':radio'))   return $(`input[name="${$el.attr('name')}"]:checked`).length === 0;
+    const val = $el.val();
+    if (Array.isArray(val)) return val.length === 0;  // multi-select
+    return !val || String(val).trim() === '';
+  }
+  function validateRequired(){
+    let ok = true;
+    getRequiredFields().each(function(){
+      const $el = $(this);
+      clearErrorFor($el);
+      if (isEmptyField($el)) {
+        showError($el, 'Campo obrigatório');
+        ok = false;
+      }
+    });
+    return ok;
+  }
+  function bindValidationListeners(){
+    getRequiredFields().each(function(){
+      const $el = $(this);
+      if ($el.hasClass('select2-hidden-accessible')) {
+        $el.off('.formv')
+           .on('select2:select.formv select2:clear.formv change.formv', ()=>clearErrorFor($el));
+      } else if ($el.is(':checkbox') || $el.is(':radio')) {
+        $(`input[name="${$el.attr('name')}"]`).off('.formv').on('change.formv', ()=>clearErrorFor($el));
+      } else {
+        $el.off('.formv').on('input.formv change.formv', ()=>clearErrorFor($el));
+      }
+    });
+  }
+
+  // bind inicial (após Select2)
+  bindValidationListeners();
+
+  // intercepta submit: marca todos os faltantes de uma vez
+  $('#lec-form').on('submit', function(e){
+    clearAllErrors();
+    if (!validateRequired()){
+      e.preventDefault();
+      const $firstErr = $('.field-error').first();
+      if ($firstErr.length){
+        $('html,body').animate({scrollTop: $firstErr.offset().top - 120}, 250);
+      }
+    }
+  });
+
 });
 </script>
 {% endblock %}

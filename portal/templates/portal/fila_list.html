@@ -1,89 +1,438 @@
 {% extends "portal/base_portal.html" %}
 {% block title %}Fila · Portal{% endblock %}
+
 {% block content %}
 <div class="flex items-center justify-between mb-6">
   <h1 class="text-2xl font-semibold">Fila</h1>
-  <a href="{% url 'portal:fila_create' %}" class="inline-flex items-center bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700">
-    <span class="material-symbols-outlined mr-1">add</span>Novo
+  <a href="{% url 'portal:fila_create' %}" class="inline-flex items-center px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+    <span class="material-symbols-outlined mr-1 text-[20px]">add</span>
+    Novo
   </a>
 </div>
 
-<form method="get" class="mb-4">
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-    {{ filter.form.especialidade }}
-    {{ filter.form.procedimento }}
-    {{ filter.form.medico }}
-    {{ filter.form.prioridade }}
-    {{ filter.form.ativo }}
-    {{ filter.form.medida_judicial }}
-    {{ filter.form.data_entrada }}
-    {{ filter.form.prontuario }}
-  </div>
-  <div class="mt-3">
-    <button class="bg-gray-800 text-white px-3 py-2 rounded">Filtrar</button>
+{# ---------------- Filtros ---------------- #}
+<form method="get" class="mb-6">
+  <div id="filters" class="bg-white border rounded-lg shadow-sm p-4">
+    <div class="mb-3 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-gray-700">Filtros</h2>
+      <div class="space-x-2">
+        <button type="submit" class="px-3 py-2 rounded border bg-indigo-600 text-white text-sm hover:bg-indigo-700">Aplicar</button>
+        <a href="{% url 'portal:fila_list' %}" class="px-3 py-2 rounded border text-sm">Limpar</a>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1" for="{{ filter.form.especialidade.id_for_label }}">Especialidade</label>
+        {{ filter.form.especialidade }}
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1" for="{{ filter.form.procedimento.id_for_label }}">Procedimento</label>
+        {{ filter.form.procedimento }}
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1" for="{{ filter.form.medico.id_for_label }}">Médico</label>
+        {{ filter.form.medico }}
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1" for="{{ filter.form.prioridade.id_for_label }}">Prioridade</label>
+        {{ filter.form.prioridade }}
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1" for="{{ filter.form.ativo.id_for_label }}">Ativo</label>
+        {{ filter.form.ativo }}
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1" for="{{ filter.form.medida_judicial.id_for_label }}">Medida Judicial</label>
+        {{ filter.form.medida_judicial }}
+      </div>
+
+      <div class="md:col-span-2">
+        <label class="block text-xs font-medium text-gray-600 mb-1" for="{{ filter.form.data_entrada_min.id_for_label }}">Data de Entrada (de/até)</label>
+        <div class="grid grid-cols-2 gap-2">
+          {{ filter.form.data_entrada_min }}
+          {{ filter.form.data_entrada_max }}
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1" for="{{ filter.form.prontuario.id_for_label }}">Prontuário</label>
+        {{ filter.form.prontuario }}
+      </div>
+    </div>
   </div>
 </form>
 
+{# ---------------- Tabela ---------------- #}
 <div class="overflow-x-auto bg-white border rounded-lg shadow-sm">
   <table class="min-w-full text-sm">
-    <thead class="bg-gray-50 text-gray-600">
-      <tr>
-        <th class="px-4 py-2 text-center">Posição</th>
-        <th class="px-4 py-2 text-left">Prontuário</th>
-        <th class="px-4 py-2 text-left">Especialidade</th>
-        <th class="px-4 py-2 text-left">Procedimento</th>
-        <th class="px-4 py-2 text-left">Prioridade</th>
-        <th class="px-4 py-2 text-center">Ativo</th>
-        <th class="px-4 py-2 text-center">Judicial</th>
-        <th class="px-4 py-2 text-left">Entrada</th>
-        <th class="px-4 py-2 text-center">Ações</th>
+    <thead class="bg-gray-50 text-gray-700 sticky top-0 z-10">
+      <tr class="text-left">
+        <th class="px-4 py-2 text-center w-20">Posição</th>
+        <th class="px-4 py-2">Prontuário</th>
+        <th class="px-4 py-2">Especialidade</th>
+        <th class="px-4 py-2">Procedimento</th>
+        <th class="px-4 py-2">Prioridade</th>
+        <th class="px-4 py-2 text-center w-20">Ativo</th>
+        <th class="px-4 py-2 text-center w-24">Judicial</th>
+        <th class="px-4 py-2">Entrada</th>
+        <th class="px-4 py-2 text-center w-40">Ações</th>
       </tr>
     </thead>
-    <tbody>
+    <tbody class="divide-y">
       {% for o in objetos %}
-      <tr class="border-t">
-        <td class="px-4 py-2 text-center">
-          {% if o.get_posicao %}{{ o.get_posicao }}{% elif o.get_posicao %}{{ o.get_posicao }}{% else %}—{% endif %}
-        </td>
+      <tr class="even:bg-gray-50">
+        <td class="px-4 py-2 text-center font-medium">{{ o.get_posicao|default:"—" }}</td>
         <td class="px-4 py-2">{{ o.paciente.prontuario|default:"—" }}</td>
         <td class="px-4 py-2">{{ o.especialidade|default:"—" }}</td>
         <td class="px-4 py-2">{{ o.procedimento|default:"—" }}</td>
-        <td class="px-4 py-2">{{ o.prioridade|default:"—" }}</td>
-        <td class="px-4 py-2 text-center">
-          {% if o.ativo %}<span class="inline-flex items-center px-2 py-1 rounded text-green-800 bg-green-100">Sim</span>
-          {% else %}<span class="inline-flex items-center px-2 py-1 rounded text-gray-700 bg-gray-100">Não</span>{% endif %}
+        <td class="px-4 py-2">
+          <span class="inline-flex items-center px-2 py-1 rounded bg-indigo-50 text-indigo-800">
+            {{ o.prioridade|default:"—" }}
+          </span>
         </td>
         <td class="px-4 py-2 text-center">
-          {% if o.medida_judicial %}<span class="inline-flex items-center px-2 py-1 rounded text-amber-800 bg-amber-100">Sim</span>
-          {% else %}<span class="inline-flex items-center px-2 py-1 rounded text-gray-700 bg-gray-100">Não</span>{% endif %}
+          {% if o.ativo %}
+            <span class="inline-flex items-center px-2 py-1 rounded text-green-800 bg-green-100">Sim</span>
+          {% else %}
+            <span class="inline-flex items-center px-2 py-1 rounded text-gray-700 bg-gray-100">Não</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-2 text-center">
+          {% if o.medida_judicial %}
+            <span class="inline-flex items-center px-2 py-1 rounded text-amber-800 bg-amber-100">
+              <span class="material-symbols-outlined mr-1 text-[18px] align-middle">gavel</span>
+              Sim
+            </span>
+          {% else %}
+            <span class="inline-flex items-center px-2 py-1 rounded text-gray-700 bg-gray-100">Não</span>
+          {% endif %}
         </td>
         <td class="px-4 py-2">{{ o.data_entrada|date:"d/m/Y H:i" }}</td>
-        <td class="px-4 py-2 text-center">
-          <a href="{% url 'portal:fila_detail' o.pk %}" class="text-blue-600 hover:underline">Ver</a>
-          {% if o.ativo %}
-            <span class="mx-1">·</span>
-            <a href="{% url 'portal:fila_update' o.pk %}" class="text-amber-600 hover:underline">Editar</a>
-          {% endif %}
-          <span class="mx-1">·</span>
-          <a href="{% url 'portal:fila_history' o.pk %}" class="text-gray-700 hover:underline">Histórico</a>
+        <td class="px-4 py-2">
+          <div class="flex items-center justify-center gap-2.5">
+            <a href="{% url 'portal:fila_detail' o.pk %}"
+               class="p-1.5 rounded hover:bg-blue-50 text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+               title="Ver">
+              <span class="material-symbols-outlined text-[20px]">visibility</span>
+              <span class="sr-only">Ver</span>
+            </a>
+            {% if o.ativo %}
+            <a href="{% url 'portal:fila_update' o.pk %}"
+               class="p-1.5 rounded hover:bg-amber-50 text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-300"
+               title="Editar">
+              <span class="material-symbols-outlined text-[20px]">edit</span>
+              <span class="sr-only">Editar</span>
+            </a>
+            {% endif %}
+            <a href="{% url 'portal:fila_history' o.pk %}"
+               class="p-1.5 rounded hover:bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300"
+               title="Histórico">
+              <span class="material-symbols-outlined text-[20px]">history</span>
+              <span class="sr-only">Histórico</span>
+            </a>
+          </div>
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="9" class="px-4 py-6 text-center text-gray-500">Nenhum registro encontrado.</td></tr>
+      <tr>
+        <td colspan="9" class="px-4 py-6 text-center text-gray-500">Nenhum registro encontrado.</td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+{# ---- CSS Select2 com cara de Tailwind ---- #}
+<style>
+  
+  /* 1) Quebrar textos longos dentro dos chips (sem vazar) */
+  #filters .select2-container--default .select2-selection--multiple .select2-selection__rendered{
+    align-items:flex-start;
+    gap:.25rem;
+    flex-wrap:wrap;
+  }
+  #filters .select2-container--default .select2-selection--multiple .select2-selection__choice{
+    max-width: calc(100% - 2.5rem); /* deixa espaço pro "limpar tudo" */
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.15;
+  }
+  #filters .select2-selection__choice__display{
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
 
-{% if page_obj.has_other_pages %}
-<div class="mt-4 flex items-center justify-center gap-2">
-  {% if page_obj.has_previous %}
-  <a class="px-3 py-1 border rounded" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
-  {% endif %}
-  <span class="text-sm text-gray-600">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-  {% if page_obj.has_next %}
-  <a class="px-3 py-1 border rounded" href="?page={{ page_obj.next_page_number }}">Próxima</a>
-  {% endif %}
-</div>
-{% endif %}
+  /* 2) Botão "limpar tudo" (allowClear) bonito e fixo à direita */
+  #filters .select2-container--default .select2-selection--multiple{
+    position: relative;
+    padding-right: 2.25rem !important; /* espaço pro botão */
+    min-height:44px;
+  }
+  #filters .select2-container--default .select2-selection--multiple .select2-selection__clear{
+    position:absolute;
+    right:.5rem; top:50%; transform:translateY(-50%);
+    width:22px; height:22px;
+    border-radius:9999px;
+    background:#f3f4f6;   /* gray-100 */
+    color:#4b5563;        /* gray-600 */
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px; line-height:1;
+    cursor:pointer; opacity:.9;
+  }
+  #filters .select2-container--default .select2-selection--multiple .select2-selection__clear:hover{
+    background:#e5e7eb;   /* gray-200 */
+    color:#111827;        /* gray-900 */
+  }
+
+  /* 3) Reverte nosso ajuste anterior no “x” de cada chip (volta ao padrão) */
+  #filters .select2-container--default .select2-selection--multiple .select2-selection__choice__remove{
+    float:left !important;
+    order:initial !important;
+    background:transparent !important;
+    width:auto !important; height:auto !important;
+    padding:0 !important; margin-right:.25rem !important;
+    border-radius:0 !important;
+    color:inherit !important; font-weight:inherit !important;
+  }
+  /* FIX: remove a “caixa” interna do Select2 múltiplo e mostra o placeholder corretamente */
+  #filters .select2-container--default .select2-selection--multiple .select2-search__field{
+    border:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    height:32px !important;
+    line-height:32px !important;
+    padding:0 .5rem !important;
+    margin:0 !important;
+    width:100% !important;
+  }
+  #filters .select2-container--default .select2-selection--multiple{
+    min-height:44px;
+    padding:.25rem .375rem !important;
+    display:flex; align-items:center; flex-wrap:wrap;
+  }
+  #filters .select2-container--default .select2-selection--multiple .select2-selection__rendered{
+    display:flex; align-items:center; flex-wrap:wrap; gap:.25rem;
+  }
+  #filters .select2-search__field::placeholder{ color:#9ca3af; opacity:1; }
+  /* --- Força altura visível pro campo de busca do Select2 múltiplo (placeholder aparece) --- */
+  .select2-container--default .select2-selection--multiple{
+    min-height: 44px;                 /* aumenta a área clicável */
+    padding:.25rem .375rem;
+  }
+  .select2-container--default .select2-selection--multiple .select2-selection__rendered{
+    align-items:center;               /* alinha verticalmente */
+  }
+  .select2-container--default .select2-selection--multiple .select2-search--inline{
+    flex:1 1 12rem;                   /* dá espaço pro placeholder */
+  }
+  .select2-container--default .select2-selection--multiple .select2-search__field{
+    height:28px !important;           /* <-- altura visível */
+    min-height:28px;
+    line-height:28px !important;
+    width:100% !important;            /* ignora width inline do select2 */
+    padding:0 .5rem;
+    margin:0;
+    border:none;
+    outline:none;
+    resize:none;                      /* no textarea */
+    overflow:hidden;                  /* no textarea */
+  }
+  .select2-container--default .select2-selection--multiple .select2-search__field::placeholder{
+    color:#9ca3af;                    /* gray-400 */
+    opacity:1;
+  }
+  /* --- Correção: exibir o placeholder no Select2 múltiplo --- */
+  .select2-container--default .select2-selection--multiple .select2-selection__rendered{
+    display:flex; flex-wrap:wrap; gap:.25rem; align-items:center;
+  }
+  .select2-container--default .select2-selection--multiple .select2-search--inline{
+    flex: 1 1 10rem; /* dá espaço pro input mostrar o placeholder */
+  }
+  .select2-container--default .select2-selection--multiple .select2-search__field{
+    width:100% !important;
+    min-width:10rem;         /* evita ficar com largura 0 */
+    line-height:1.25rem;
+    padding:.25rem .25rem;
+  }
+  .select2-search__field::placeholder{
+    color:#9ca3af; /* gray-400 */
+    opacity:1;     /* firefox */
+  }
+  /* Inputs do formulário */
+  #filters select, #filters input, #filters textarea{
+    width:100%;
+    border:1px solid #e5e7eb; /* gray-200 */
+    border-radius:.375rem;     /* rounded-md */
+    padding:.5rem .75rem;      /* px-3 py-2 */
+    background-color:#fff;
+  }
+  #filters select:focus, #filters input:focus{
+    outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.2); /* indigo focus ring */
+  }
+
+  /* Select2 base */
+  .select2-container { width:100%!important; }
+  .select2-container .select2-selection{
+    min-height: 38px;
+    border:1px solid #e5e7eb;
+    border-radius:.375rem;
+    background:#fff;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__rendered{
+    line-height: 36px; padding-left:.5rem; padding-right:2rem;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__arrow{
+    height:36px; right:.5rem;
+  }
+
+  /* Múltiplo (chips) */
+  .select2-container--default .select2-selection--multiple{
+    min-height: 38px; padding:.25rem .375rem;
+  }
+  .select2-container--default .select2-selection--multiple .select2-selection__rendered{
+    display:flex; flex-wrap:wrap; gap:.25rem; padding:0; margin:0;
+  }
+  .select2-container--default .select2-selection--multiple .select2-selection__choice{
+    margin:0; padding:.125rem .5rem; border:0;
+    border-radius:9999px; /* full */
+    background:#eef2ff;   /* indigo-50 */
+    color:#3730a3;        /* indigo-800 */
+    font-size:.75rem;     /* text-xs */
+  }
+  .select2-container--default .select2-selection--multiple .select2-selection__choice__remove{
+    margin-right:.25rem; color:#4f46e5; font-weight:700;
+  }
+  .select2-container--default.select2-container--focus .select2-selection--multiple{
+    border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.2);
+  }
+  .select2-dropdown{
+    border:1px solid #e5e7eb; box-shadow:0 4px 16px rgba(0,0,0,.06);
+  }
+  .select2-results__option{ padding:.5rem .75rem; }
+  .select2-results__option--highlighted{ background:#eef2ff; color:#111827; }
+  .select2-search--dropdown .select2-search__field{
+    border:1px solid #e5e7eb; border-radius:.375rem; padding:.375rem .5rem;
+  }
+
+  /* z-index para ficar acima de cards/modais */
+  .select2-container--open{ z-index: 9999; }
+</style>
+
+{# ---- Assets Select2 (ok manter CDNs) ---- #}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+  // Helper: normaliza payload {id,text} vindo da API
+  function mapResults(data, idKey, textKey) {
+    const results = (data.results || data || []).map(it => ({
+      id: String(it[idKey] ?? it.id ?? ""), text: String(it[textKey] ?? it.text ?? "")
+    }));
+    return { results, pagination: { more: !!(data.pagination && data.pagination.more) } };
+  }
+
+  // Helper: pré-preencher valores já selecionados caso o backend não devolva <option selected>
+  // Tenta buscar por ?ids=ID,ID,ID no mesmo endpoint (se você suportar isso); senão usa as <option selected> existentes.
+  async function prefillSelect2($el, endpoint, idsParam='ids') {
+    const currentVals = ($el.val() || []).filter(Boolean);
+    if (!currentVals.length) return;
+
+    // Se já existem <option selected> com texto, não precisa fazer nada
+    const haveText = $el.find('option:selected').toArray().every(opt => (opt.text || '').trim().length);
+    if (haveText) return;
+
+    try {
+      const url = new URL(endpoint, window.location.origin);
+      url.searchParams.set(idsParam, currentVals.join(','));
+      const res = await fetch(url.toString());
+      if (!res.ok) return;
+      const data = await res.json();
+      const items = (data.results || data || []);
+      items.forEach(it => {
+        const id = String(it.id || it.codigo || it.cod_especialidade || it.matricula);
+        const text = String(it.text || it.nome || it.nome_especialidade);
+        if (id && text) {
+          const opt = new Option(text, id, true, true);
+          $el.append(opt).trigger('change');
+        }
+      });
+    } catch (e) { /* silencioso */ }
+  }
+
+  // Factory: inicializa Select2 AJAX com boas práticas
+  function makeAjaxSelect2($el, { url, placeholder, minLen=2, getParams, mapFn }) {
+    $el.select2({
+      width: '100%',
+      placeholder,
+      allowClear: true,                // mostra (x)
+      closeOnSelect: false,            // múltiplo: marcar vários sem fechar
+      dropdownParent: $('#filters'),   // evita z-index estranho
+      language: {
+        inputTooShort: () => `Digite ao menos ${minLen} caractere(s)…`,
+        errorLoading:   () => 'Erro ao carregar resultados.',
+        loadingMore:    () => 'Carregando mais…',
+        noResults:      () => 'Nenhum resultado.',
+        searching:      () => 'Buscando…',
+        removeAllItems: () => 'Limpar seleção'
+      },
+      ajax: {
+        url,
+        dataType: 'json',
+        delay: 250,
+        data: params => (getParams ? getParams(params) : { term: params.term, page: params.page || 1 }),
+        processResults: (data, params) => (mapFn ? mapFn(data, params) : mapResults(data, 'id', 'text')),
+        cache: true
+      },
+      // Classes utilitárias (Select2 4.1+)
+      selectionCssClass: 'border rounded-md',
+      dropdownCssClass: 'rounded-md'
+    });
+  }
+
+  $(function(){
+    // ESPECIALIDADE: espera que sua API retorne {results:[{id: <cod_especialidade>, text: <nome>}]}
+    const $esp = $('#id_especialidade');
+    if ($esp.length){
+      makeAjaxSelect2($esp, {
+        url: "{% url 'fila_cirurgica:especialidade_api_autocomplete' %}",
+        placeholder: 'Filtrar por especialidade…',
+        getParams: (p) => ({ term: p.term, page: p.page || 1, limit: 15 }),
+        mapFn: (data, params) => mapResults(data, 'id', 'text')
+      });
+      // Opcional: tente pré-preencher usando o mesmo endpoint aceitando ?ids=
+      // prefillSelect2($esp, "{% url 'fila_cirurgica:especialidade_api_autocomplete' %}");
+    }
+
+    // PROCEDIMENTO
+    const $proc = $('#id_procedimento');
+    if ($proc.length){
+      makeAjaxSelect2($proc, {
+        url: "{% url 'fila_cirurgica:procedimento_api_autocomplete' %}",
+        placeholder: 'Filtrar por procedimento…',
+        getParams: (p) => ({ term: p.term, page: p.page || 1, limit: 15 }),
+        mapFn: (data, params) => mapResults(data, 'id', 'text')
+      });
+      // prefillSelect2($proc, "{% url 'fila_cirurgica:procedimento_api_autocomplete' %}");
+    }
+
+    // MÉDICO
+    const $med = $('#id_medico');
+    if ($med.length){
+      makeAjaxSelect2($med, {
+        url: "{% url 'fila_cirurgica:medico_api_autocomplete' %}",
+        placeholder: 'Filtrar por médico…',
+        getParams: (p) => ({ term: p.term, page: p.page || 1, limit: 15 }),
+        mapFn: (data, params) => mapResults(data, 'id', 'text')
+      });
+      // prefillSelect2($med, "{% url 'fila_cirurgica:medico_api_autocomplete' %}");
+    }
+
+    // Botão "Limpar" global já resetará; mas se quiser um micro botão por campo:
+    // $('.btn-clear-esp').on('click', () => { $esp.val(null).trigger('change') })
+  });
+</script>
 {% endblock %}
