@@ -9,8 +9,89 @@ from fila_cirurgica.api_helpers import (
     get_or_create_profissional,
 )
 from fila_cirurgica.models import ListaEsperaCirurgica
+# portal/forms.py
+from django import forms
+from fila_cirurgica.models import ListaEsperaCirurgica
 
+class FilaUpdateForm(forms.ModelForm):
+    motivo_alteracao = forms.CharField(
+        label="Motivo da alteração",
+        required=True,
+        widget=forms.Textarea(attrs={
+            "rows": 3,
+            "placeholder": "Explique o que mudou e por quê (obrigatório)."
+        })
+    )
 
+    LOCKED_FIELDS = ("especialidade", "procedimento", "paciente", "medico")
+
+    class Meta:
+        model = ListaEsperaCirurgica
+        fields = "__all__"   # mantém todos os campos do model + o extra acima
+        widgets = {
+            "medida_judicial": forms.CheckboxInput(attrs={"class": "h-40 w-40"}),
+            "observacoes": forms.Textarea(
+                attrs={"rows": 4, "placeholder": "Observações…", "class": "w-full border rounded px-3 py-2"}
+            ),
+            "motivo_alteracao": forms.Textarea(
+                attrs={"rows": 4, "placeholder": "Alterações", "class": "w-full border rounded px-3 py-2"}
+            ),
+            "data_novo_contato": forms.DateInput(
+                format="%Y-%m-%d",                 # como o valor inicial será renderizado
+                attrs={"type": "date"}
+            ),
+        }
+        labels = {
+            "prioridade": "Prioridade",
+            "medida_judicial": "Medida judicial",
+            "situacao": "Situação",
+            "observacoes": "Observações",
+            "motivo_alteracao": "Explique o que mudou e por quê (obrigatório).",
+        }
+        help_texts = {
+            "prioridade": "Selecione a prioridade conforme a regra do serviço.",
+            "medida_judicial": "Marque se há decisão judicial aplicável.",
+            "situacao": "Estado atual do paciente na fila.",
+            "observacoes": "Anotações internas/observações livres.",
+            "motivo_alteracao": "Explique o que mudou e por quê (obrigatório).",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "data_novo_contato" in self.fields:
+            self.fields["data_novo_contato"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
+        if self.instance and not self.instance.ativo:
+            if 'motivo_alteracao' in self.fields:
+                del self.fields['motivo_alteracao']
+        # Travar os quatro campos
+        for name in self.LOCKED_FIELDS:
+            if name in self.fields:
+                self.fields[name].disabled = True
+                self.fields[name].widget.attrs.update({
+                    "readonly": True,
+                    "class": (self.fields[name].widget.attrs.get("class", "") + " bg-gray-50 cursor-not-allowed").strip(),
+                    "title": "Campo bloqueado na edição"
+                })
+
+    def clean(self):
+        cleaned = super().clean()
+        cleaned['ativo'] = True
+
+        # Se alguém tentar “destravar” no HTML e enviar valores, a gente barra
+        for name in self.LOCKED_FIELDS:
+            if name in self.changed_data:
+                self.add_error(name, "Este campo não pode ser alterado.")
+                # restaura o valor original para evitar qualquer mudança silenciosa
+                cleaned[name] = getattr(self.instance, name)
+
+        # Garante motivo
+        motivo = cleaned.get("motivo_alteracao", "") or ""
+        print(cleaned)
+        if not motivo.strip():
+            self.add_error("motivo_alteracao", "Informe o motivo da alteração.")
+        return cleaned
+    
+    
 class PortalCreateFormLight(forms.ModelForm):
     """
     Form de criação leve para LEC.
@@ -159,3 +240,30 @@ class PortalCreateFormLight(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+    
+class FilaDeactivateForm(forms.Form):
+    motivo = forms.ChoiceField(
+        label="Motivo da remoção",
+        choices=(),                 # será preenchido dinamicamente com os choices do model
+        required=True,
+        widget=forms.RadioSelect,
+    )
+    change_reason = forms.CharField(
+        label="Justificativa",
+        required=True,
+        widget=forms.Textarea(attrs={
+            "rows": 3,
+            "placeholder": "Descreva brevemente o contexto da remoção (obrigatório)."
+        }),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Puxa os choices do campo motivo_saida do model para manter 100% em sincronia com o Admin
+        try:
+            field = ListaEsperaCirurgica._meta.get_field("motivo_saida")
+            if getattr(field, "choices", None):
+                self.fields["motivo"].choices = list(field.choices)
+        except Exception:
+            # Se algo der errado, mantém sem choices (o form invalidará)
+            pass

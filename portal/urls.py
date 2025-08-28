@@ -2,6 +2,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 from .views import (
     DashboardView,
+    FilaDeactivateView,
     FilaListView,
     FilaCreateView,
     FilaDetailView,
@@ -25,4 +26,5 @@ urlpatterns = [
     path("fila/<int:pk>/", FilaDetailView.as_view(), name="fila_detail"),
     path("fila/<int:pk>/editar/", FilaUpdateView.as_view(), name="fila_update"),
     path("fila/<int:pk>/historico/", FilaHistoryView.as_view(), name="fila_history"),
+    path("fila/<int:pk>/remover/", FilaDeactivateView.as_view(), name="fila_remove"),
 ]

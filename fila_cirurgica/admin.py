@@ -300,18 +300,18 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
     def save_model(self, request, obj, form, change):
         """Processa campos de autocomplete com dados da API externa."""
         try:    
-            if not obj:
-                # Paciente
-                obj.paciente = get_or_create_paciente(form.cleaned_data.get('paciente_api_choice'))
+            # if not obj:
+            # Paciente
+            obj.paciente = get_or_create_paciente(form.cleaned_data.get('paciente_api_choice'))
 
-                # Procedimento
-                obj.procedimento = get_or_create_procedimento(form.cleaned_data.get('procedimento_api_choice'))
+            # Procedimento
+            obj.procedimento = get_or_create_procedimento(form.cleaned_data.get('procedimento_api_choice'))
 
-                # Especialidade
-                obj.especialidade = get_or_create_especialidade(form.cleaned_data.get('especialidade_api_choice'))
+            # Especialidade
+            obj.especialidade = get_or_create_especialidade(form.cleaned_data.get('especialidade_api_choice'))
 
-                # Médico (opcional)
-                obj.medico = get_or_create_profissional(form.cleaned_data.get('medico_api_choice'))
+            # Médico (opcional)
+            obj.medico = get_or_create_profissional(form.cleaned_data.get('medico_api_choice'))
 
         except requests.RequestException as e:
             self.message_user(
@@ -424,8 +424,8 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
         return obj.procedimento
     
     def has_change_permission(self, request, obj=None):
-        if obj and not obj.ativo:   # exemplo
-            return False            # abre read-only
+        # if obj and not obj.ativo:   # exemplo
+        #     return False            # abre read-only
         return super().has_change_permission(request, obj)
     
     def has_delete_permission(self, request, obj=None):

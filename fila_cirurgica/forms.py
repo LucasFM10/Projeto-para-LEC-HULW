@@ -71,6 +71,7 @@ class ListaEsperaCirurgicaForm(forms.ModelForm):
             'observacoes',
             'data_novo_contato',
             'change_reason',
+            'ativo'
         ]
 
     def __init__(self, *args, **kwargs):

@@ -1,0 +1,63 @@
+{% extends "portal/base_portal.html" %}
+{% block title %}Editar entrada · Fila{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-semibold">Editar entrada</h1>
+  <a href="{% url 'portal:fila_list' %}" class="px-3 py-2 rounded border text-sm">Voltar</a>
+</div>
+
+<form method="post" class="bg-white border rounded-lg shadow-sm p-4 space-y-4" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="p-3 rounded bg-red-50 text-red-700 text-sm">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {% for field in form.visible_fields %}
+      {% if field.name not in exclude_fields %}
+        <div>
+          <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">
+            {{ field.label }}
+          </label>
+          {{ field }}
+          {% if field.help_text %}
+            <p class="text-gray-500 text-sm">{{ field.help_text }}</p>
+          {% endif %}
+          {% for error in field.errors %}
+            <p class="text-red-600 text-sm">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% if object.ativo %}
+  <div class="flex items-center justify-end gap-2 pt-2">
+    <a href="{% url 'portal:fila_list' %}" class="px-3 py-2 rounded border text-sm">Cancelar</a>
+    <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">
+      Salvar alterações
+    </button>
+  </div>
+  {% endif %}
+</form>
+
+<style>
+  form input, form select, form textarea {
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: .375rem;
+    padding: .5rem .75rem;
+    background: #fff;
+  }
+  form input:focus, form select:focus, form textarea:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,.2);
+  }
+  /* Aparência “read-only” para os campos travados */
+  .cursor-not-allowed { cursor: not-allowed; }
+  .bg-gray-50 { background-color: #f9fafb; }
+</style>
+{% endblock %}
