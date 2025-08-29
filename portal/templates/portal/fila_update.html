@@ -11,10 +11,9 @@
   {% csrf_token %}
 
   {% if form.non_field_errors %}
-    <div class="p-3 rounded bg-red-50 text-red-700 text-sm">
-      {{ form.non_field_errors }}
-    </div>
+    <div class="p-3 rounded bg-red-50 text-red-700 text-sm">{{ form.non_field_errors }}</div>
   {% endif %}
+
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     {% for field in form.visible_fields %}
       {% if field.name not in exclude_fields %}
@@ -23,41 +22,37 @@
             {{ field.label }}
           </label>
           {{ field }}
-          {% if field.help_text %}
-            <p class="text-gray-500 text-sm">{{ field.help_text }}</p>
-          {% endif %}
-          {% for error in field.errors %}
-            <p class="text-red-600 text-sm">{{ error }}</p>
-          {% endfor %}
+          {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
+          {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
         </div>
       {% endif %}
     {% endfor %}
   </div>
-  {% if object.ativo %}
   <div class="flex items-center justify-end gap-2 pt-2">
     <a href="{% url 'portal:fila_list' %}" class="px-3 py-2 rounded border text-sm">Cancelar</a>
     <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">
       Salvar alterações
     </button>
   </div>
-  {% endif %}
 </form>
 
 <style>
-  form input, form select, form textarea {
+  /* aplica apenas a campos de texto (não radio/checkbox) */
+  form input:not([type="checkbox"]):not([type="radio"]),
+  form select,
+  form textarea {
     width: 100%;
     border: 1px solid #e5e7eb;
     border-radius: .375rem;
     padding: .5rem .75rem;
     background: #fff;
   }
-  form input:focus, form select:focus, form textarea:focus {
-    outline: none;
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99,102,241,.2);
+  form input:not([type="checkbox"]):not([type="radio"]):focus,
+  form select:focus,
+  form textarea:focus {
+    outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.2);
   }
-  /* Aparência “read-only” para os campos travados */
-  .cursor-not-allowed { cursor: not-allowed; }
-  .bg-gray-50 { background-color: #f9fafb; }
+  /* checkbox alinhado e sem width 100% */
+  form input[type="checkbox"] { width: auto; height: 1rem; margin-right: .5rem; }
 </style>
 {% endblock %}

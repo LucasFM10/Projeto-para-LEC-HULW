@@ -27,9 +27,11 @@ API_BASE_URL = "http://127.0.0.1:8000/api/v1"
 SECRET_KEY = 'django-insecure-339&&s55h9xja8$*x@-p^j)%3hm4wo&=ms)q)1(de7)35zw*j+'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+
+CSRF_FAILURE_VIEW = "portal.views.csrf_failure"
 
 SIMPLE_HISTORY_REVERT_DISABLED = True
 

@@ -1,4 +1,3 @@
-# portal/forms.py
 from __future__ import annotations
 
 from django import forms
@@ -9,100 +8,108 @@ from fila_cirurgica.api_helpers import (
     get_or_create_profissional,
 )
 from fila_cirurgica.models import ListaEsperaCirurgica
-# portal/forms.py
-from django import forms
-from fila_cirurgica.models import ListaEsperaCirurgica
+
 
 class FilaUpdateForm(forms.ModelForm):
+    """
+    Edição: trava FK principais; exige motivo da alteração; mantém campos padronizados.
+    """
     motivo_alteracao = forms.CharField(
         label="Motivo da alteração",
         required=True,
-        widget=forms.Textarea(attrs={
-            "rows": 3,
-            "placeholder": "Explique o que mudou e por quê (obrigatório)."
-        })
+        widget=forms.Textarea(
+            attrs={"rows": 3, "placeholder": "Explique o que mudou e por quê (obrigatório)."}),
     )
 
     LOCKED_FIELDS = ("especialidade", "procedimento", "paciente", "medico")
 
     class Meta:
         model = ListaEsperaCirurgica
-        fields = "__all__"   # mantém todos os campos do model + o extra acima
+        fields = [
+            "especialidade",
+            "procedimento",
+            "paciente",
+            "medico",
+            "prioridade",
+            "medida_judicial",
+            "situacao",
+            "observacoes",
+            "data_novo_contato",
+            "motivo_alteracao",
+        ]
         widgets = {
-            "medida_judicial": forms.CheckboxInput(attrs={"class": "h-40 w-40"}),
+            "medida_judicial": forms.CheckboxInput(attrs={"class": "h-4 w-4 text-indigo-600 border-gray-300 rounded"}),
             "observacoes": forms.Textarea(
-                attrs={"rows": 4, "placeholder": "Observações…", "class": "w-full border rounded px-3 py-2"}
+                attrs={"rows": 4, "placeholder": "Observações…",
+                       "class": "w-full border rounded px-3 py-2"}
             ),
             "motivo_alteracao": forms.Textarea(
-                attrs={"rows": 4, "placeholder": "Alterações", "class": "w-full border rounded px-3 py-2"}
+                attrs={"rows": 4, "placeholder": "Alterações",
+                       "class": "w-full border rounded px-3 py-2"}
             ),
-            "data_novo_contato": forms.DateInput(
-                format="%Y-%m-%d",                 # como o valor inicial será renderizado
-                attrs={"type": "date"}
-            ),
+            "data_novo_contato": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
         }
         labels = {
             "prioridade": "Prioridade",
             "medida_judicial": "Medida judicial",
             "situacao": "Situação",
             "observacoes": "Observações",
-            "motivo_alteracao": "Explique o que mudou e por quê (obrigatório).",
         }
         help_texts = {
             "prioridade": "Selecione a prioridade conforme a regra do serviço.",
             "medida_judicial": "Marque se há decisão judicial aplicável.",
             "situacao": "Estado atual do paciente na fila.",
             "observacoes": "Anotações internas/observações livres.",
-            "motivo_alteracao": "Explique o que mudou e por quê (obrigatório).",
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # aceita 'YYYY-MM-DD' e 'DD/MM/YYYY' para o input de data (quando presente)
         if "data_novo_contato" in self.fields:
-            self.fields["data_novo_contato"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
-        if self.instance and not self.instance.ativo:
-            if 'motivo_alteracao' in self.fields:
-                del self.fields['motivo_alteracao']
-        # Travar os quatro campos
+            self.fields["data_novo_contato"].input_formats = [
+                "%Y-%m-%d", "%d/%m/%Y"]
+
+        # oculta "motivo_alteracao" quando o registro estiver inativo
+        if self.instance and not self.instance.ativo and "motivo_alteracao" in self.fields:
+            self.fields.pop("motivo_alteracao")
+
+        # trava FKs principais
         for name in self.LOCKED_FIELDS:
             if name in self.fields:
                 self.fields[name].disabled = True
-                self.fields[name].widget.attrs.update({
-                    "readonly": True,
-                    "class": (self.fields[name].widget.attrs.get("class", "") + " bg-gray-50 cursor-not-allowed").strip(),
-                    "title": "Campo bloqueado na edição"
-                })
+                self.fields[name].widget.attrs.update(
+                    {
+                        "readonly": True,
+                        "class": (self.fields[name].widget.attrs.get("class", "") + " bg-gray-50 cursor-not-allowed").strip(),
+                        "title": "Campo bloqueado na edição",
+                    }
+                )
 
     def clean(self):
         cleaned = super().clean()
-        cleaned['ativo'] = True
+        print(cleaned)
 
-        # Se alguém tentar “destravar” no HTML e enviar valores, a gente barra
+        # impede mudanças silenciosas via HTML nos campos travados
         for name in self.LOCKED_FIELDS:
             if name in self.changed_data:
                 self.add_error(name, "Este campo não pode ser alterado.")
-                # restaura o valor original para evitar qualquer mudança silenciosa
                 cleaned[name] = getattr(self.instance, name)
 
-        # Garante motivo
-        motivo = cleaned.get("motivo_alteracao", "") or ""
-        print(cleaned)
-        if not motivo.strip():
-            self.add_error("motivo_alteracao", "Informe o motivo da alteração.")
+        # exige motivo da alteração
+        motivo = (cleaned.get("motivo_alteracao") or "").strip()
+        if "motivo_alteracao" in self.fields and not motivo:
+            self.add_error("motivo_alteracao",
+                           "Informe o motivo da alteração.")
         return cleaned
-    
-    
-class PortalCreateFormLight(forms.ModelForm):
-    """
-    Form de criação leve para LEC.
-    Os campos *_api são "fakes" (IDs vindos da API por AJAX) para popular os FKs reais
-    (paciente, especialidade, procedimento, medico) no save().
-    """
 
-    # --- Campos "fake" controlados pelo front (Select2/AJAX) ---
+
+class FilaCreateForm(forms.ModelForm):
+    """
+    Criação "leve" via IDs externos (Select2/AJAX). Campos *_api abastecem os FKs reais no save().
+    """
     especialidade_api = forms.ChoiceField(
         label="Especialidade",
-        required=False,
+        required=True,
         choices=[("", "Digite para buscar…")],
         widget=forms.Select(attrs={"id": "id_especialidade_api"}),
     )
@@ -118,7 +125,6 @@ class PortalCreateFormLight(forms.ModelForm):
         choices=[("", "Digite para buscar…")],
         widget=forms.Select(attrs={"id": "id_medico_api"}),
     )
-
     prontuario = forms.ChoiceField(
         label="Prontuário",
         required=True,
@@ -130,9 +136,12 @@ class PortalCreateFormLight(forms.ModelForm):
         model = ListaEsperaCirurgica
         fields = ["prioridade", "medida_judicial", "situacao", "observacoes"]
         widgets = {
-            "medida_judicial": forms.CheckboxInput(attrs={"class": "h-4 w-4"}),
+            "medida_judicial": forms.CheckboxInput(
+                attrs={"class": "h-4 w-4 text-indigo-600 border-gray-300 rounded"}
+            ),
             "observacoes": forms.Textarea(
-                attrs={"rows": 4, "placeholder": "Observações…", "class": "w-full border rounded px-3 py-2"}
+                attrs={"rows": 4, "placeholder": "Observações…",
+                       "class": "w-full border rounded px-3 py-2"}
             ),
         }
         labels = {
@@ -148,46 +157,34 @@ class PortalCreateFormLight(forms.ModelForm):
             "observacoes": "Anotações internas/observações livres.",
         }
 
-    # ------------------------------
-    # Inicialização e ajustes de UI
-    # ------------------------------
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        def _ensure_choice(field_name: str) -> None:
+        def ensure_choice(field_name: str) -> None:
             """
-            Garante que o valor postado exista em `choices` para o Django validar.
-            Sem isso, o POST '17' cai em "Faça uma escolha válida" porque o select
-            é carregado por AJAX e o form não tem a lista no server-side.
+            Injeta a opção postada em `choices` para o Django validar selects AJAX.
             """
             field = self.fields[field_name]
             value = self.data.get(field_name) or self.initial.get(field_name)
             if not value:
                 return
-
-            # Opcional: se o front enviar também o label, aceitamos via *_text
             label = self.data.get(f"{field_name}_text") or str(value)
-
-            # Evita duplicado e injeta o par (valor, rótulo)
             if not any(str(value) == str(v) for v, _ in field.choices):
                 field.choices = list(field.choices) + [(str(value), label)]
 
         for name in ("especialidade_api", "procedimento_api", "medico_api", "prontuario"):
-            _ensure_choice(name)
+            ensure_choice(name)
 
-        # Estilo padrão Tailwind (evita repetir classes em cada field)
+        # estilo padrão (evita repetir classes em cada field)
         for name, field in self.fields.items():
             if name in {"medida_judicial", "observacoes"}:
                 continue
             current = field.widget.attrs.get("class", "")
-            field.widget.attrs["class"] = (current + " w-full border rounded px-3 py-2").strip()
+            field.widget.attrs["class"] = (
+                current + " w-full border rounded px-3 py-2").strip()
 
-        # Valor visual padrão (não altera regra de negócio)
-        if "medida_judicial" in self.fields and self.initial.get("medida_judicial") is None:
-            self.initial["medida_judicial"] = False
-
-        # Ordem mais amigável no formulário
-        desired_order = [
+        # ordem mais amigável
+        desired = [
             "especialidade_api",
             "procedimento_api",
             "medico_api",
@@ -197,27 +194,21 @@ class PortalCreateFormLight(forms.ModelForm):
             "prioridade",
             "observacoes",
         ]
-        # Só reordena os que existem
-        self.order_fields([f for f in desired_order if f in self.fields])
+        self.order_fields([f for f in desired if f in self.fields])
 
-    # ------------------------------
-    # Validação
-    # ------------------------------
     def clean(self) -> dict:
         cleaned = super().clean()
-        required = ("especialidade_api", "procedimento_api", "medico_api", "prontuario")
+        required = ("especialidade_api", "procedimento_api",
+                    "medico_api", "prontuario")
         missing = [r for r in required if not cleaned.get(r)]
         if missing:
-            raise forms.ValidationError("Preencha todos os campos obrigatórios.")
+            raise forms.ValidationError(
+                "Preencha todos os campos obrigatórios.")
         return cleaned
 
-    # ------------------------------
-    # Persistência
-    # ------------------------------
     def save(self, commit: bool = True) -> ListaEsperaCirurgica:
         """
-        Mapeia os IDs vindos dos campos *_api para os FKs reais do modelo via helpers
-        e então salva a instância.
+        Converte IDs externos em FKs reais via helpers e salva.
         """
         instance: ListaEsperaCirurgica = super().save(commit=False)
 
@@ -226,44 +217,40 @@ class PortalCreateFormLight(forms.ModelForm):
         proc_id = str(self.cleaned_data["procedimento_api"])
         med_id = str(self.cleaned_data["medico_api"])
 
-        # Helpers: buscam/criam registros locais a partir de IDs externos
-        paciente = get_or_create_paciente(prontuario=prontuario)
-        especialidade = get_or_create_especialidade(esp_id)
-        procedimento = get_or_create_procedimento(proc_id)
-        medico = get_or_create_profissional(med_id)
-
-        instance.paciente = paciente
-        instance.especialidade = especialidade
-        instance.procedimento = procedimento
-        instance.medico = medico
+        # helpers populam/retornam registros locais
+        instance.paciente = get_or_create_paciente(prontuario=prontuario)
+        instance.especialidade = get_or_create_especialidade(esp_id)
+        instance.procedimento = get_or_create_procedimento(proc_id)
+        instance.medico = get_or_create_profissional(med_id)
 
         if commit:
             instance.save()
         return instance
-    
+
+
 class FilaDeactivateForm(forms.Form):
+    """
+    Remoção (inativação) no Portal: motivo pré-definido (choices do model) + justificativa.
+    """
     motivo = forms.ChoiceField(
         label="Motivo da remoção",
-        choices=(),                 # será preenchido dinamicamente com os choices do model
+        choices=(),  # preenchido dinamicamente com os choices do model
         required=True,
         widget=forms.RadioSelect,
     )
     change_reason = forms.CharField(
         label="Justificativa",
         required=True,
-        widget=forms.Textarea(attrs={
-            "rows": 3,
-            "placeholder": "Descreva brevemente o contexto da remoção (obrigatório)."
-        }),
+        widget=forms.Textarea(
+            attrs={"rows": 3, "placeholder": "Descreva o contexto da remoção (obrigatório)."}),
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Puxa os choices do campo motivo_saida do model para manter 100% em sincronia com o Admin
+        # puxa os choices do campo motivo_saida para manter em sincronia com o Admin
         try:
             field = ListaEsperaCirurgica._meta.get_field("motivo_saida")
             if getattr(field, "choices", None):
                 self.fields["motivo"].choices = list(field.choices)
         except Exception:
-            # Se algo der errado, mantém sem choices (o form invalidará)
             pass

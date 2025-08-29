@@ -25,6 +25,7 @@ def api_autocomplete_proxy(request, api_endpoint, id_field, text_format_str):
         more = str(len(results)) == params.get('limit', 25)
         return JsonResponse({"results": results, "pagination": {"more": more}})
     except requests.RequestException:
+        print("api_autocomplete_proxy: erro ao chamar API")
         return JsonResponse({'error': 'Falha ao contatar a API'}, status=500)
     
 
