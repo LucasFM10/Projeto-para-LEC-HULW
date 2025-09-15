@@ -1,5 +1,6 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
+
 from .views import (
     DashboardView,
     FilaDeactivateView,
@@ -8,13 +9,14 @@ from .views import (
     FilaDetailView,
     FilaUpdateView,
     FilaHistoryView,
+    PortalLoginView
 )
 
 app_name = "portal"
 
 urlpatterns = [
     # Autenticação (usa templates do portal)
-    path("login/",  auth_views.LoginView.as_view(template_name="portal/login.html"), name="login"),
+    path("login/", PortalLoginView.as_view(template_name="portal/login.html"), name="login"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
 
     # Dashboard

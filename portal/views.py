@@ -45,13 +45,22 @@ def csrf_failure(request, reason=""):
         status=403,
     )
 
+from django.contrib.auth.views import LoginView
+
+class PortalLoginView(LoginView):
+    template_name = "login.html"
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        remember = self.request.POST.get("remember_me")
+        # 0 = expira ao fechar o navegador; 1209600 = 14 dias
+        self.request.session.set_expiry(1209600 if remember else 0)
+        return response
+
+
 # --------------------- Mixins ---------------------
 
 
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
-    """Exige usuário autenticado e staff; mostra 403 bonito para quem não é staff."""
-    login_url = "login"  # ajuste para sua URL de login
-    redirect_field_name = "next"
 
     def test_func(self) -> bool:
         u = self.request.user

@@ -122,16 +122,17 @@ class ListaEsperaCirurgica(models.Model):
         ]
 
     SITUACAO_CHOICES = [
-        ('CA', 'CONSULTA AGENDADA'),
+        ('CA', 'RETORNO AGENDADO'),
         ('AE', 'EXAMES PENDENTES'),
         ('DP', 'DOCUMENTAÇÃO PENDENTE'),
         ('PP', 'PACIENTE PRONTO PARA CIRURGIA'),
-        ('CNR', 'CONTATO NÃO REALIZADO'),
+        ('CA', 'CIRURGIA AGENDADA'),
+        ('CC', 'CIRURGIA CANCELADA'),
         ('T1F', 'TENTATIVA 1 FALHOU'),
         ('T2F', 'TENTATIVA 2 FALHOU'),
         ('T3F', 'TENTATIVA 3 FALHOU, NÃO SERÃO REALIZADOS NOVOS CONTATOS'),
         ('CRS', 'CONTATO REALIZADO COM SUCESSO'),
-        ]
+    ]
 
     paciente = models.ForeignKey(
         PacienteAghu,
@@ -180,6 +181,7 @@ class ListaEsperaCirurgica(models.Model):
         )
 
     MOTIVO_SAIDA_CHOICES = [
+        ('SUCESSO', 'Cirurgia realizada no HULW'),
         ('MORTE', 'Paciente faleceu'),
         ('OUTRO_LOCAL', 'Cirurgia realizada em outro local'),
         ('AUTOEXCLUSAO', 'Paciente solicitou autoexclusão da fila'),

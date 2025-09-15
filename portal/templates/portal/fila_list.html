@@ -6,10 +6,12 @@
 {% block content %}
   <div class="flex items-center justify-between mb-6">
     <h1 class="text-2xl font-semibold">Fila</h1>
-    <a href="{% url 'portal:fila_create' %}" class="inline-flex items-center px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
-      <span class="material-symbols-outlined mr-1 text-[20px]">add</span>
-      Novo
-    </a>
+    {% if perms.fila_cirurgica.change_listaesperacirurgica %}
+      <a href="{% url 'portal:fila_create' %}" class="inline-flex items-center px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <span class="material-symbols-outlined mr-1 text-[20px]">add</span>
+        Novo
+      </a>
+    {% endif %}
   </div>
 
   {# ---------------- Filtros ---------------- #}
