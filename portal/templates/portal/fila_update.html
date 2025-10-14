@@ -7,17 +7,48 @@
   <a href="{% url 'portal:fila_list' %}" class="px-3 py-2 rounded border text-sm">Voltar</a>
 </div>
 
-<form method="post" class="bg-white border rounded-lg shadow-sm p-4 space-y-4" novalidate>
+<form id="lec-form" method="post" class="bg-white border rounded-lg shadow-sm p-4 space-y-4" novalidate enctype="multipart/form-data">
   {% csrf_token %}
 
   {% if form.non_field_errors %}
     <div class="p-3 rounded bg-red-50 text-red-700 text-sm">{{ form.non_field_errors }}</div>
   {% endif %}
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div id="grid-campos" class="grid grid-cols-1 md:grid-cols-2 gap-4">
     {% for field in form.visible_fields %}
-      {% if field.name not in exclude_fields %}
-        <div>
+      
+      {% comment %}
+      Aqui está a lógica para mover os campos e posicionar o bloco de expansão:
+      {% endcomment %}
+      
+      {% if field.name == 'medida_judicial' %}
+        <div id="field-wrapper-{{ field.id_for_label }}" class="md:col-span-2">
+          <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">
+            {{ field.label }}
+          </label>
+          {{ field }}
+          {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
+          {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
+        </div>
+        
+        <div id="judicial-fields-block-full" class="hidden md:col-span-2 border border-yellow-400 bg-yellow-50 rounded-md p-4 mt-4">
+            <h3 class="text-lg font-semibold text-yellow-800 mb-4">Dados do Processo Judicial</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="judicial-grid">
+                </div>
+            <p class="text-xs text-gray-500 mt-3">Preencha o número, descrição e anexe documentos relevantes.</p>
+        </div>
+
+      {% elif field.name in "judicial_numero,judicial_descricao,judicial_anexos" %}
+        <div id="field-wrapper-{{ field.id_for_label }}" class="judicial-field-temp-wrapper hidden"> 
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">
+                {{ field.label }}
+            </label>
+            {{ field }}
+            {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
+            {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
+        </div>
+      {% else %}
+        <div id="field-wrapper-{{ field.id_for_label }}">
           <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">
             {{ field.label }}
           </label>
@@ -28,6 +59,7 @@
       {% endif %}
     {% endfor %}
   </div>
+  
   <div class="flex items-center justify-end gap-2 pt-2">
     <a href="{% url 'portal:fila_list' %}" class="px-3 py-2 rounded border text-sm">Cancelar</a>
     <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">
@@ -53,6 +85,71 @@
     outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.2);
   }
   /* checkbox alinhado e sem width 100% */
+  label[for="id_medida_judicial"]{ display: inline-flex; align-items: center; } 
   form input[type="checkbox"] { width: auto; height: 1rem; margin-right: .5rem; }
+  
+  /* Select2 (estilos removidos para brevidade, mas devem ser mantidos se Select2 for usado) */
 </style>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<script>
+$(function(){
+  
+  // ============================
+  //      LÓGICA JUDICIAL PARA EDIÇÃO
+  // ============================
+  const $checkboxJudicial  = $('#id_medida_judicial'); 
+  const $judicialBlock     = $('#judicial-fields-block-full'); 
+  const $judicialGrid      = $('#judicial-grid');
+
+  // CAMPOS A SEREM MOVIDOS
+  const $judicialNumero    = $('#id_judicial_numero');     
+  const $judicialDescricao = $('#id_judicial_descricao');
+  const $judicialAnexos    = $('#id_judicial_anexos'); 
+  
+  const judicialFields = [$judicialNumero, $judicialDescricao, $judicialAnexos];
+
+  if ($checkboxJudicial.length && $judicialBlock.length) {
+      
+      // 1. Mover os campos originais para dentro do bloco de expansão
+      judicialFields.forEach(function($field) {
+          if ($field.length) {
+              const $wrapper = $field.closest('div');
+              // Move o wrapper inteiro para a grid de expansão
+              $wrapper.appendTo($judicialGrid); 
+          }
+      });
+      
+      // 2. Aplicar placeholder (para edição)
+      $('#judicial-grid #id_judicial_numero').attr('placeholder', 'Insira o número do processo...');
+      $('#judicial-grid #id_judicial_descricao').attr('placeholder', 'Descreva o teor da medida judicial...');
+      
+      // 3. Função de mostrar/esconder
+      function updateJudicialVisibility() {
+          if ($checkboxJudicial.is(':checked')) {
+              $judicialBlock.removeClass('hidden'); 
+          } else {
+              $judicialBlock.addClass('hidden');
+          }
+      }
+
+      // 4. Ligar eventos e carregar estado inicial (IMPORTANTE: estado inicial já vem do Django)
+      $checkboxJudicial.on('change', updateJudicialVisibility);
+      updateJudicialVisibility();
+      
+      // 5. Exibir os campos que foram movidos (eles estavam escondidos no HTML)
+      judicialFields.forEach(function($field) {
+          if ($field.length) {
+             $field.closest('div').removeClass('hidden'); 
+          }
+      });
+  }
+
+
+  // ============================
+  // Nota: A lógica de validação Select2 foi removida para foco, mas deve ser reinserida se necessário.
+  // ============================
+});
+</script>
 {% endblock %}

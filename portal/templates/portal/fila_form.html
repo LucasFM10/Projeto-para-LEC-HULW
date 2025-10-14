@@ -7,7 +7,7 @@
   <a href="{% url 'portal:fila_list' %}" class="px-3 py-2 rounded border text-sm">Voltar</a>
 </div>
 
-<form id="lec-form" method="post" class="bg-white border rounded-lg shadow-sm p-4 space-y-4" novalidate>
+<form id="lec-form" method="post" class="bg-white border rounded-lg shadow-sm p-4 space-y-4" novalidate enctype="multipart/form-data">
   {% csrf_token %}
 
   {% if form.non_field_errors %}
@@ -16,14 +16,49 @@
 
   <div id="grid-campos" class="grid grid-cols-1 md:grid-cols-2 gap-4">
     {% for field in form.visible_fields %}
-      <div>
-        <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">
-          {{ field.label }}
-        </label>
-        {{ field }}
-        {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
-        {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
-      </div>
+      
+      {% comment %} 
+      1. Campo Medida Judicial (checkbox): Ocupa 2 colunas e é o gatilho.
+      2. Campos Judiciais (numero, descricao, anexos): São renderizados com "hidden" e depois movidos pelo JS.
+      3. Outros campos: Mantêm 1 coluna.
+      {% endcomment %}
+      
+      {% if field.name == 'medida_judicial' %}
+        <div id="field-wrapper-{{ field.id_for_label }}" class="md:col-span-2">
+          <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">
+            {{ field.label }}
+          </label>
+          {{ field }}
+          {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
+          {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
+        </div>
+        
+        <div id="judicial-fields-block-full" class="hidden md:col-span-2 border border-yellow-400 bg-yellow-50 rounded-md p-4 mt-4">
+            <h3 class="text-lg font-semibold text-yellow-800 mb-4">Dados do Processo Judicial</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="judicial-grid">
+                </div>
+            <p class="text-xs text-gray-500 mt-3">Preencha o número, descrição e anexe documentos relevantes.</p>
+        </div>
+
+      {% elif field.name in "judicial_numero,judicial_descricao,judicial_anexos" %}
+        <div id="field-wrapper-{{ field.id_for_label }}" class="judicial-field-temp-wrapper hidden"> 
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">
+                {{ field.label }}
+            </label>
+            {{ field }}
+            {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
+            {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
+        </div>
+      {% else %}
+        <div id="field-wrapper-{{ field.id_for_label }}">
+          <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">
+            {{ field.label }}
+          </label>
+          {{ field }}
+          {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
+          {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
+        </div>
+      {% endif %}
     {% endfor %}
   </div>
 
@@ -41,6 +76,8 @@
   form select, form textarea{ width:100%; border:1px solid #e5e7eb; border-radius:.375rem; padding:.5rem .75rem; background:#fff; }
   form input:not([type="checkbox"]):not([type="radio"]):focus,
   form select:focus, form textarea:focus{ outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.2); }
+  /* Estilo para que o checkbox fique alinhado com o label */
+  label[for="id_medida_judicial"]{ display: inline-flex; align-items: center; } 
   form input[type="checkbox"]{ width:auto; height:1rem; margin-right:.5rem; }
 
   /* erros */
@@ -62,7 +99,6 @@
   .btn-ghost-xs{padding:.25rem .5rem; font-size:.75rem; border:1px solid #e5e7eb; border-radius:.375rem;}
 </style>
 
-<!-- jQuery + Select2 -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -101,14 +137,14 @@ $(function(){
   if ($pac.length) makeAjaxSelect2($pac, { url:"{% url 'fila_cirurgica:paciente_api_autocomplete' %}", placeholder:'Digite nº ou nome do paciente…', getParams:p=>({ term:p.term, page:p.page||1, limit:10 }) });
 
   // ============================
-  //      Secção Secundária
+  //      Secção Secundária (Existente)
   // ============================
-  const $esp2  = $('#id_especialidade_secundario_api');   // opcional no form
-  const $proc2 = $('#id_procedimento_secundario_api');    // opcional no form
+  const $esp2  = $('#id_especialidade_secundario_api');
+  const $proc2 = $('#id_procedimento_secundario_api');
   const $hiddenOpen = $('#id_secondary_section_open');
 
   if ($esp2.length || $proc2.length){
-    // injeta UI logo após o wrapper do Procedimento principal
+    // [CÓDIGO DE INJEÇÃO E LÓGICA DE TOGGLE PARA PROCEDIMENTO SECUNDÁRIO]
     const $wrapProc = $proc.closest('div');
     const $ui = $(`
       <div id="secondary-ui" class="mt-2">
@@ -122,11 +158,9 @@ $(function(){
       </div>`);
     $wrapProc.append($ui);
 
-    // move wrappers dos campos secundários para dentro da grade
     const moveWrap = ($el)=>{ if($el.length){ $el.closest('div').appendTo('#secondary-grid'); } };
     moveWrap($esp2); moveWrap($proc2);
 
-    // Select2 dos secundários (filtrando procedimento pela especialidade secundária)
     if ($esp2.length) makeAjaxSelect2($esp2, { url:"{% url 'fila_cirurgica:especialidade_api_autocomplete' %}", placeholder:'Digite para buscar especialidade (sec.)…', getParams:p=>({ term:p.term, page:p.page||1, limit:10 }) });
     if ($proc2.length){
       makeAjaxSelect2($proc2, { url:"{% url 'fila_cirurgica:procedimento_api_autocomplete' %}", placeholder:'Selecione uma especialidade primeiro…', dependsOn:$esp2, getParams:p=>({ term:p.term, page:p.page||1, limit:10, especialidade_id:$esp2.val()||'' }) });
@@ -134,19 +168,71 @@ $(function(){
       $esp2.on('change', ()=>{ $proc2.val(null).trigger('change'); setProcEnabled(!!$esp2.val(), $proc2); });
     }
 
-    // toggle + estado
     const $block = $('#secondary-block'), $ico = $('#ico');
     function openSec(){ $block.removeClass('hidden'); $ico.text('–'); if($hiddenOpen.length) $hiddenOpen.val('on'); }
     function closeSec(){ $block.addClass('hidden'); $ico.text('+'); if($hiddenOpen.length) $hiddenOpen.val(''); }
     $('#toggle-secondary').on('click', ()=> $block.hasClass('hidden') ? openSec() : closeSec());
 
-    // abre automaticamente se já veio marcado/tem valor
     const shouldOpen = ($hiddenOpen.length && ($hiddenOpen.val()==='on')) || ($esp2.length && $esp2.val()) || ($proc2.length && $proc2.val());
     if (shouldOpen) openSec();
   }
 
   // ============================
-  // Validação client-side básica
+  //      LÓGICA JUDICIAL (CORRIGIDA PARA POSICIONAMENTO)
+  // ============================
+  const $checkboxJudicial  = $('#id_medida_judicial'); 
+  const $judicialBlock     = $('#judicial-fields-block-full'); 
+  const $judicialGrid      = $('#judicial-grid');
+
+  // CAMPOS A SEREM MOVIDOS
+  const $judicialNumero    = $('#id_judicial_numero');     
+  const $judicialDescricao = $('#id_judicial_descricao');
+  const $judicialAnexos    = $('#id_judicial_anexos'); 
+  
+  const judicialFields = [$judicialNumero, $judicialDescricao, $judicialAnexos];
+
+  if ($checkboxJudicial.length && $judicialBlock.length) {
+      
+      // 1. Mover os campos originais para dentro do bloco de expansão
+      judicialFields.forEach(function($field) {
+          if ($field.length) {
+              // Encontra o wrapper original (o div que contém o label e o input)
+              const $wrapper = $field.closest('div');
+              
+              // Move o wrapper INTEIRO para a grid de expansão
+              $wrapper.appendTo($judicialGrid); 
+          }
+      });
+      
+      // 2. Função de mostrar/esconder
+      function updateJudicialVisibility() {
+          if ($checkboxJudicial.is(':checked')) {
+              $judicialBlock.removeClass('hidden'); 
+          } else {
+              $judicialBlock.addClass('hidden');
+          }
+      }
+
+      // 3. Aplicar placeholder (apenas se os campos existirem e estiverem na judicial-grid)
+      $('#judicial-grid #id_judicial_numero').attr('placeholder', 'Insira o número do processo...');
+      $('#judicial-grid #id_judicial_descricao').attr('placeholder', 'Descreva o teor da medida judicial...');
+
+
+      // 4. Ligar eventos e carregar estado inicial
+      $checkboxJudicial.on('change', updateJudicialVisibility);
+      updateJudicialVisibility();
+      
+      // 5. Exibir os campos que foram movidos (eles estavam escondidos pelo loop)
+      judicialFields.forEach(function($field) {
+          if ($field.length) {
+             $field.closest('div').removeClass('hidden'); 
+          }
+      });
+  }
+
+
+  // ============================
+  // Validação client-side básica (EXISTENTE)
   // ============================
   function clearErrorFor($el){
     if ($el.hasClass('select2-hidden-accessible')){

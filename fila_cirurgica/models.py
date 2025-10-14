@@ -191,6 +191,23 @@ class ListaEsperaCirurgica(models.Model):
         null=True,
         verbose_name="Data para novo contato"
         )
+    judicial_numero = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name="Número do Processo Judicial"
+    )
+    judicial_descricao = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Descrição da Medida Judicial"
+    )
+    judicial_anexos = models.FileField(
+        upload_to='anexos_judiciais/',  # Define uma subpasta para salvar os arquivos
+        blank=True,
+        null=True,
+        verbose_name="Anexos do Processo Judicial"
+    )
 
     MOTIVO_SAIDA_CHOICES = [
         ('SUCESSO', 'Cirurgia realizada no HULW'),

@@ -9,7 +9,6 @@ from fila_cirurgica.api_helpers import (
 )
 from fila_cirurgica.models import ListaEsperaCirurgica
 
-
 class FilaUpdateForm(forms.ModelForm):
     """
     Edição: trava FK principais; exige motivo da alteração; mantém campos padronizados.
@@ -21,6 +20,24 @@ class FilaUpdateForm(forms.ModelForm):
             attrs={"rows": 3, "placeholder": "Explique o que mudou e por quê (obrigatório)."}),
     )
 
+    # =================================================================
+    # NOVOS CAMPOS JUDICIAIS
+    # =================================================================
+    judicial_numero = forms.CharField(
+        label="Número do Processo Judicial",
+        required=False,
+        widget=forms.TextInput(attrs={"id": "id_judicial_numero"})
+    )
+    judicial_descricao = forms.CharField(
+        label="Descrição da Medida Judicial",
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3, "id": "id_judicial_descricao"})
+    )
+    judicial_anexos = forms.FileField(
+        label="Anexar Documentos",
+        required=False,
+    )
+    
     LOCKED_FIELDS = ("especialidade", "procedimento", "paciente", "medico")
 
     class Meta:
@@ -36,6 +53,10 @@ class FilaUpdateForm(forms.ModelForm):
             "observacoes",
             "data_novo_contato",
             "motivo_alteracao",
+            # Incluindo os novos campos
+            "judicial_numero",
+            "judicial_descricao",
+            "judicial_anexos",
         ]
         widgets = {
             "medida_judicial": forms.CheckboxInput(attrs={"class": "h-4 w-4 text-indigo-600 border-gray-300 rounded"}),
@@ -64,6 +85,17 @@ class FilaUpdateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # Ordem dos campos: Incluir os campos judiciais no fluxo
+        desired = [
+            "especialidade", "procedimento", "paciente", "medico", # Campos travados
+            "prioridade", "medida_judicial",
+            # Novos campos judiciais que serão movidos
+            "judicial_numero", "judicial_descricao", "judicial_anexos",
+            "situacao", "observacoes", "data_novo_contato", "motivo_alteracao"
+        ]
+        self.order_fields([f for f in desired if f in self.fields])
+
         # aceita 'YYYY-MM-DD' e 'DD/MM/YYYY' para o input de data (quando presente)
         if "data_novo_contato" in self.fields:
             self.fields["data_novo_contato"].input_formats = [
@@ -87,8 +119,8 @@ class FilaUpdateForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
-        print(cleaned)
-
+        # ... (restante do clean, inalterado)
+        
         # impede mudanças silenciosas via HTML nos campos travados
         for name in self.LOCKED_FIELDS:
             if name in self.changed_data:
@@ -101,7 +133,6 @@ class FilaUpdateForm(forms.ModelForm):
             self.add_error("motivo_alteracao",
                            "Informe o motivo da alteração.")
         return cleaned
-
 
 class FilaCreateForm(forms.ModelForm):
     """
@@ -148,16 +179,38 @@ class FilaCreateForm(forms.ModelForm):
         widget=forms.HiddenInput()
     )
 
+    judicial_numero = forms.CharField(
+        label="Número do Processo Judicial",
+        required=False,
+        widget=forms.TextInput(attrs={"id": "id_judicial_numero"})
+    )
+    judicial_descricao = forms.CharField(
+        label="Descrição da Medida Judicial",
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3, "id": "id_judicial_descricao"})
+    )
+    judicial_anexos = forms.FileField(
+        label="Anexos do Processo",
+        required=False,
+        widget=forms.FileInput(attrs={"id": "id_judicial_anexos"})
+    )
+
     class Meta:
         model = ListaEsperaCirurgica
-        fields = ["prioridade",
-                  "medida_judicial",
-                  "situacao",
-                  "observacoes",
-                  "secondary_section_open",]
+        fields = [
+            "prioridade",
+            "medida_judicial",
+            "situacao",
+            "observacoes",
+            "secondary_section_open",
+            # Adicionando os novos campos aqui
+            "judicial_numero", 
+            "judicial_descricao", 
+            "judicial_anexos",
+        ]
         widgets = {
             "medida_judicial": forms.CheckboxInput(
-                attrs={"class": "h-4 w-4 text-indigo-600 border-gray-300 rounded"}
+                attrs={"class": "h-4 w-4 text-indigo-600 border-gray-300 rounded", "id": "id_medida_judicial"}
             ),
             "observacoes": forms.Textarea(
                 attrs={"rows": 4, "placeholder": "Observações…",
@@ -201,7 +254,7 @@ class FilaCreateForm(forms.ModelForm):
 
         # estilo padrão (evita repetir classes em cada field)
         for name, field in self.fields.items():
-            if name in {"medida_judicial", "observacoes"}:
+            if name in {"medida_judicial", "observacoes", "judicial_anexos"}:
                 continue
             current = field.widget.attrs.get("class", "")
             field.widget.attrs["class"] = (
@@ -216,6 +269,9 @@ class FilaCreateForm(forms.ModelForm):
             "medico_api",
             "prontuario",
             "medida_judicial",
+            "judicial_numero", 
+            "judicial_descricao", 
+            "judicial_anexos",
             "situacao",
             "prioridade",
             "observacoes",
