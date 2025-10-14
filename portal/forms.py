@@ -119,6 +119,18 @@ class FilaCreateForm(forms.ModelForm):
         choices=[("", "Digite para buscar…")],
         widget=forms.Select(attrs={"id": "id_procedimento_api"}),
     )
+    especialidade_secundario_api = forms.ChoiceField(
+        label="Especialidade Secundária",
+        required=False,  # CORRIGIDO: Deve ser opcional
+        choices=[("", "Digite para buscar…")],
+        widget=forms.Select(attrs={"id": "id_especialidade_secundario_api"}),
+    )
+    procedimento_secundario_api = forms.ChoiceField(
+        label="Procedimento Secundário",
+        required=False,  # CORRIGIDO: Deve ser opcional
+        choices=[("", "Digite para buscar…")],
+        widget=forms.Select(attrs={"id": "id_procedimento_secundario_api"}),
+    )
     medico_api = forms.ChoiceField(
         label="Médico",
         required=True,
@@ -131,10 +143,18 @@ class FilaCreateForm(forms.ModelForm):
         choices=[("", "Digite para buscar…")],
         widget=forms.Select(attrs={"id": "id_prontuario"}),
     )
+    secondary_section_open = forms.BooleanField(
+        required=False, 
+        widget=forms.HiddenInput()
+    )
 
     class Meta:
         model = ListaEsperaCirurgica
-        fields = ["prioridade", "medida_judicial", "situacao", "observacoes"]
+        fields = ["prioridade",
+                  "medida_judicial",
+                  "situacao",
+                  "observacoes",
+                  "secondary_section_open",]
         widgets = {
             "medida_judicial": forms.CheckboxInput(
                 attrs={"class": "h-4 w-4 text-indigo-600 border-gray-300 rounded"}
@@ -172,7 +192,11 @@ class FilaCreateForm(forms.ModelForm):
             if not any(str(value) == str(v) for v, _ in field.choices):
                 field.choices = list(field.choices) + [(str(value), label)]
 
-        for name in ("especialidade_api", "procedimento_api", "medico_api", "prontuario"):
+        for name in (
+            "especialidade_api", "procedimento_api", 
+            "especialidade_secundario_api", "procedimento_secundario_api",
+            "medico_api", "prontuario"
+        ):
             ensure_choice(name)
 
         # estilo padrão (evita repetir classes em cada field)
@@ -187,6 +211,8 @@ class FilaCreateForm(forms.ModelForm):
         desired = [
             "especialidade_api",
             "procedimento_api",
+            "especialidade_secundario_api",
+            "procedimento_secundario_api",
             "medico_api",
             "prontuario",
             "medida_judicial",
@@ -216,12 +242,21 @@ class FilaCreateForm(forms.ModelForm):
         esp_id = str(self.cleaned_data["especialidade_api"])
         proc_id = str(self.cleaned_data["procedimento_api"])
         med_id = str(self.cleaned_data["medico_api"])
+        proc_sec_id = self.cleaned_data.get("procedimento_secundario_api")
+        esp_sec_id = self.cleaned_data.get("especialidade_secundario_api")
 
         # helpers populam/retornam registros locais
         instance.paciente = get_or_create_paciente(prontuario=prontuario)
         instance.especialidade = get_or_create_especialidade(esp_id)
         instance.procedimento = get_or_create_procedimento(proc_id)
         instance.medico = get_or_create_profissional(med_id)
+
+        if proc_sec_id and esp_sec_id:
+            instance.procedimento_secundario = get_or_create_procedimento(proc_sec_id)
+            instance.especialidade_secundario = get_or_create_especialidade(esp_sec_id)
+        else:
+            instance.procedimento_secundario = None
+            instance.especialidade_secundario = None
 
         if commit:
             instance.save()

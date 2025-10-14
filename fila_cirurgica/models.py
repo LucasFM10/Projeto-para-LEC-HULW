@@ -117,8 +117,8 @@ class ListaEsperaCirurgica(models.Model):
     
     PRIORIDADE_CHOICES = [
         ('ONC', 'Paciente Oncológico'),
-        ('BRE', 'Com Brevidade'),
-        ('SEM', 'Sem Brevidade'),
+        ('BRE', 'Com Prioridade'),
+        ('SEM', 'Sem Prioridade'),
         ]
 
     SITUACAO_CHOICES = [
@@ -142,9 +142,21 @@ class ListaEsperaCirurgica(models.Model):
         ProcedimentoAghu,
         on_delete=models.CASCADE
         )
+    procedimento_secundario = models.ForeignKey(
+        ProcedimentoAghu,
+        blank=True, null=True,
+        on_delete=models.CASCADE,
+        related_name='procedimento_fila_secundario',
+        )
     especialidade = models.ForeignKey(
         EspecialidadeAghu,
         on_delete=models.CASCADE
+        )
+    especialidade_secundario = models.ForeignKey(
+        EspecialidadeAghu,
+        blank=True, null=True,
+        on_delete=models.CASCADE,
+        related_name='especialidade_fila_secundario',
         )
     medico = models.ForeignKey(
         ProfissionalAghu,

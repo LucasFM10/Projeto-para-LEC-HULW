@@ -14,7 +14,7 @@
     <div class="p-3 rounded bg-red-50 text-red-700 text-sm">{{ form.non_field_errors }}</div>
   {% endif %}
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div id="grid-campos" class="grid grid-cols-1 md:grid-cols-2 gap-4">
     {% for field in form.visible_fields %}
       <div>
         <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">
@@ -36,46 +36,30 @@
 </form>
 
 <style>
-  /* padroniza inputs/seletores/textarea (não afeta radio/checkbox) */
+  /* inputs padrão */
   form input:not([type="checkbox"]):not([type="radio"]),
-  form select,
-  form textarea{
-    width:100%;
-    border:1px solid #e5e7eb;
-    border-radius:.375rem;
-    padding:.5rem .75rem;
-    background:#fff;
-  }
+  form select, form textarea{ width:100%; border:1px solid #e5e7eb; border-radius:.375rem; padding:.5rem .75rem; background:#fff; }
   form input:not([type="checkbox"]):not([type="radio"]):focus,
-  form select:focus, form textarea:focus{
-    outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.2);
-  }
+  form select:focus, form textarea:focus{ outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.2); }
   form input[type="checkbox"]{ width:auto; height:1rem; margin-right:.5rem; }
 
-  /* feedback de erro */
+  /* erros */
   .field-error{font-size:.875rem; color:#dc2626; margin-top:.25rem}
   .error-ring{border-color:#dc2626!important; box-shadow:0 0 0 1px #dc2626 inset!important}
-  .select2-container.error .select2-selection{
-    border-color:#dc2626!important; box-shadow:0 0 0 1px #dc2626 inset!important
-  }
+  .select2-container.error .select2-selection{ border-color:#dc2626!important; box-shadow:0 0 0 1px #dc2626 inset!important }
 
   /* Select2 “cara” de Tailwind */
   .select2-container{ width:100%!important; }
-  .select2-container .select2-selection{
-    min-height:38px; border:1px solid #e5e7eb; border-radius:.375rem; background:#fff;
-  }
-  .select2-container--default .select2-selection--single .select2-selection__rendered{
-    line-height:36px; padding-left:.5rem; padding-right:2rem;
-  }
-  .select2-container--default .select2-selection--single .select2-selection__arrow{
-    height:36px; right:.5rem;
-  }
+  .select2-container .select2-selection{ min-height:38px; border:1px solid #e5e7eb; border-radius:.375rem; background:#fff; }
+  .select2-container--default .select2-selection--single .select2-selection__rendered{ line-height:36px; padding-left:.5rem; padding-right:2rem; }
+  .select2-container--default .select2-selection--single .select2-selection__arrow{ height:36px; right:.5rem; }
   .select2-dropdown{ border:1px solid #e5e7eb; box-shadow:0 4px 16px rgba(0,0,0,.06); }
   .select2-results__option{ padding:.5rem .75rem; }
   .select2-results__option--highlighted{ background:#eef2ff; color:#111827; }
-  .select2-search--dropdown .select2-search__field{
-    border:1px solid #e5e7eb; border-radius:.375rem; padding:.375rem .5rem;
-  }
+  .select2-search--dropdown .select2-search__field{ border:1px solid #e5e7eb; border-radius:.375rem; padding:.375rem .5rem; }
+
+  /* botão compacto */
+  .btn-ghost-xs{padding:.25rem .5rem; font-size:.75rem; border:1px solid #e5e7eb; border-radius:.375rem;}
 </style>
 
 <!-- jQuery + Select2 -->
@@ -85,179 +69,112 @@
 
 <script>
 $(function(){
-  // ------------------ Language PT-BR p/ Select2 ------------------
-  const s2pt = {
-    inputTooShort: (args) => `Digite pelo menos ${args.minimum} caractere(s)…`,
-    errorLoading:  () => 'Erro ao carregar os resultados.',
-    loadingMore:   () => 'Carregando mais resultados…',
-    noResults:     () => 'Nenhum resultado encontrado.',
-    searching:     () => 'Buscando…',
-    removeAllItems: () => 'Limpar seleção'
-  };
+  // ------------------ i18n Select2 ------------------
+  const s2pt = { inputTooShort: a=>`Digite pelo menos ${a.minimum} caractere(s)…`, errorLoading: ()=>'Erro ao carregar os resultados.', loadingMore: ()=>'Carregando mais resultados…', noResults: ()=>'Nenhum resultado encontrado.', searching: ()=>'Buscando…', removeAllItems: ()=>'Limpar seleção' };
 
-  // Helper para mapear payloads no formato {results:[{id,text}], pagination:{more:bool}}
-  function mapResults(data, params){
-    const results = (data?.results ?? data ?? []).map(it => ({
-      id: String(it.id ?? it.codigo ?? it.cod_especialidade ?? it.matricula ?? ''),
-      text: String(it.text ?? it.nome ?? it.nome_especialidade ?? '')
-    }));
-    const more = !!(data?.pagination && data.pagination.more);
-    return { results, pagination: { more } };
-  }
-
-  // Factory para Select2 AJAX com dependência opcional (ex.: procedimento depende da especialidade)
+  // map/Factory
+  const mapResults = (data)=>({ results: (data?.results ?? data ?? []).map(it=>({ id: String(it.id ?? it.codigo ?? it.cod_especialidade ?? it.matricula ?? ''), text: String(it.text ?? it.nome ?? it.nome_especialidade ?? '') })), pagination:{ more: !!(data?.pagination&&data.pagination.more) }});
   function makeAjaxSelect2($el, { url, placeholder, getParams, dependsOn }){
-    const opts = {
-      placeholder, allowClear: true, width: '100%', language: s2pt,
-      ajax: {
-        url, dataType: 'json', delay: 300,
-        transport: function (params, success, failure) {
-          // Bloqueia busca se o dependente não está preenchido
-          if (dependsOn && !dependsOn.val()) return null;
-          return $.ajax(params).then(success).catch(failure);
-        },
-        data: function(params){
-          return (getParams ? getParams(params) : { term: params.term, page: params.page || 1, limit: 10 });
-        },
-        processResults: mapResults,
-        cache: true
-      }
-    };
-    $el.select2(opts);
+    $el.select2({ placeholder, allowClear:true, width:'100%', language:s2pt,
+      ajax:{ url, dataType:'json', delay:300,
+        transport: (p, ok, fail)=> (dependsOn && !dependsOn.val()) ? null : $.ajax(p).then(ok).catch(fail),
+        data: p => getParams ? getParams(p) : ({ term:p.term, page:p.page||1, limit:10 }),
+        processResults: mapResults, cache:true }});
   }
+  const setProcEnabled = (enabled,$sel)=>{ $sel.prop('disabled',!enabled).trigger('change.select2'); const $ph=$sel.next('.select2-container').find('.select2-selection__placeholder'); if($ph.length){ $ph.text(enabled?'Digite para buscar procedimento…':'Selecione uma especialidade primeiro…'); }};
 
-  // Campos
-  const $esp  = $('#id_especialidade_api');  // opcional
-  const $proc = $('#id_procedimento_api');   // required
-  const $med  = $('#id_medico_api');         // required
-  const $pac  = $('#id_prontuario');         // required
+  // --------- Campos principais ---------
+  const $esp  = $('#id_especialidade_api');
+  const $proc = $('#id_procedimento_api');
+  const $med  = $('#id_medico_api');
+  const $pac  = $('#id_prontuario');
 
-  // --------- ESPECIALIDADE ----------
-  if ($esp.length){
-    makeAjaxSelect2($esp, {
-      url: "{% url 'fila_cirurgica:especialidade_api_autocomplete' %}",
-      placeholder: 'Digite para buscar especialidade…',
-      getParams: p => ({ term: p.term, page: p.page || 1, limit: 10 })
-    });
-  }
-
-  // --------- PROCEDIMENTO (dependente da ESPECIALIDADE) ----------
-  function setProcEnabled(enabled){
-    $proc.prop('disabled', !enabled).trigger('change.select2');
-    const $cont = $proc.next('.select2-container').find('.select2-selection__placeholder');
-    if ($cont.length) $cont.text(enabled ? 'Digite para buscar procedimento…' : 'Selecione uma especialidade primeiro…');
-  }
+  if ($esp.length) makeAjaxSelect2($esp, { url:"{% url 'fila_cirurgica:especialidade_api_autocomplete' %}", placeholder:'Digite para buscar especialidade…', getParams:p=>({ term:p.term, page:p.page||1, limit:10 }) });
 
   if ($proc.length){
-    makeAjaxSelect2($proc, {
-      url: "{% url 'fila_cirurgica:procedimento_api_autocomplete' %}",
-      placeholder: 'Selecione uma especialidade primeiro…',
-      dependsOn: $esp,
-      getParams: p => ({
-        term: p.term, page: p.page || 1, limit: 10,
-        especialidade_id: $esp.val() || ''   // backend filtra pelos procedimentos da especialidade
-      })
-    });
-    // Estado inicial: desabilita se não houver especialidade (apenas se especialidade for usada)
-    if ($esp.length){ setProcEnabled(!!$esp.val()); }
-    $esp.on('change', function(){
-      $proc.val(null).trigger('change');     // limpa seleção ao mudar especialidade
-      setProcEnabled(!!$esp.val());
-    });
+    makeAjaxSelect2($proc, { url:"{% url 'fila_cirurgica:procedimento_api_autocomplete' %}", placeholder:'Selecione uma especialidade primeiro…', dependsOn:$esp, getParams:p=>({ term:p.term, page:p.page||1, limit:10, especialidade_id:$esp.val()||'' }) });
+    if ($esp.length) setProcEnabled(!!$esp.val(), $proc);
+    $esp.on('change', ()=>{ $proc.val(null).trigger('change'); setProcEnabled(!!$esp.val(), $proc); });
   }
 
-  // --------- MÉDICO ----------
-  if ($med.length){
-    makeAjaxSelect2($med, {
-      url: "{% url 'fila_cirurgica:medico_api_autocomplete' %}",
-      placeholder: 'Digite para buscar médico…',
-      getParams: p => ({ term: p.term, page: p.page || 1, limit: 10 })
-    });
-  }
+  if ($med.length) makeAjaxSelect2($med, { url:"{% url 'fila_cirurgica:medico_api_autocomplete' %}", placeholder:'Digite para buscar médico…', getParams:p=>({ term:p.term, page:p.page||1, limit:10 }) });
+  if ($pac.length) makeAjaxSelect2($pac, { url:"{% url 'fila_cirurgica:paciente_api_autocomplete' %}", placeholder:'Digite nº ou nome do paciente…', getParams:p=>({ term:p.term, page:p.page||1, limit:10 }) });
 
-  // --------- PRONTUÁRIO ----------
-  if ($pac.length){
-    makeAjaxSelect2($pac, {
-      url: "{% url 'fila_cirurgica:paciente_api_autocomplete' %}",
-      placeholder: 'Digite nº ou nome do paciente…',
-      getParams: p => ({ term: p.term, page: p.page || 1, limit: 10 })
-    });
+  // ============================
+  //      Secção Secundária
+  // ============================
+  const $esp2  = $('#id_especialidade_secundario_api');   // opcional no form
+  const $proc2 = $('#id_procedimento_secundario_api');    // opcional no form
+  const $hiddenOpen = $('#id_secondary_section_open');
+
+  if ($esp2.length || $proc2.length){
+    // injeta UI logo após o wrapper do Procedimento principal
+    const $wrapProc = $proc.closest('div');
+    const $ui = $(`
+      <div id="secondary-ui" class="mt-2">
+        <button type="button" id="toggle-secondary" class="btn-ghost-xs inline-flex items-center gap-1">
+          <span id="ico">+</span> Proc. secundário
+        </button>
+        <div id="secondary-block" class="hidden mt-2">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="secondary-grid"></div>
+          <p class="text-xs text-gray-500 mt-1">Opcional, filtrado pela especialidade selecionada.</p>
+        </div>
+      </div>`);
+    $wrapProc.append($ui);
+
+    // move wrappers dos campos secundários para dentro da grade
+    const moveWrap = ($el)=>{ if($el.length){ $el.closest('div').appendTo('#secondary-grid'); } };
+    moveWrap($esp2); moveWrap($proc2);
+
+    // Select2 dos secundários (filtrando procedimento pela especialidade secundária)
+    if ($esp2.length) makeAjaxSelect2($esp2, { url:"{% url 'fila_cirurgica:especialidade_api_autocomplete' %}", placeholder:'Digite para buscar especialidade (sec.)…', getParams:p=>({ term:p.term, page:p.page||1, limit:10 }) });
+    if ($proc2.length){
+      makeAjaxSelect2($proc2, { url:"{% url 'fila_cirurgica:procedimento_api_autocomplete' %}", placeholder:'Selecione uma especialidade primeiro…', dependsOn:$esp2, getParams:p=>({ term:p.term, page:p.page||1, limit:10, especialidade_id:$esp2.val()||'' }) });
+      setProcEnabled(!!$esp2.val(), $proc2);
+      $esp2.on('change', ()=>{ $proc2.val(null).trigger('change'); setProcEnabled(!!$esp2.val(), $proc2); });
+    }
+
+    // toggle + estado
+    const $block = $('#secondary-block'), $ico = $('#ico');
+    function openSec(){ $block.removeClass('hidden'); $ico.text('–'); if($hiddenOpen.length) $hiddenOpen.val('on'); }
+    function closeSec(){ $block.addClass('hidden'); $ico.text('+'); if($hiddenOpen.length) $hiddenOpen.val(''); }
+    $('#toggle-secondary').on('click', ()=> $block.hasClass('hidden') ? openSec() : closeSec());
+
+    // abre automaticamente se já veio marcado/tem valor
+    const shouldOpen = ($hiddenOpen.length && ($hiddenOpen.val()==='on')) || ($esp2.length && $esp2.val()) || ($proc2.length && $proc2.val());
+    if (shouldOpen) openSec();
   }
 
   // ============================
-  // Validação client-side (sem refresh quando inválido)
+  // Validação client-side básica
   // ============================
   function clearErrorFor($el){
     if ($el.hasClass('select2-hidden-accessible')){
-      const $cont = $el.next('.select2-container');
-      $cont.removeClass('error');
-      $cont.next('.field-error').remove();
-    } else {
-      $el.removeClass('error-ring');
-      $el.next('.field-error').remove();
-    }
+      const $c = $el.next('.select2-container'); $c.removeClass('error'); $c.next('.field-error').remove();
+    } else { $el.removeClass('error-ring'); $el.next('.field-error').remove(); }
   }
-  function showError($el, msg){
+  function showError($el,msg){
     if ($el.hasClass('select2-hidden-accessible')){
-      const $cont = $el.next('.select2-container');
-      $cont.addClass('error');
-      if ($cont.next('.field-error').length === 0){
-        $('<p class="field-error">'+msg+'</p>').insertAfter($cont);
-      }
-    } else {
-      $el.addClass('error-ring');
-      if ($el.next('.field-error').length === 0){
-        $('<p class="field-error">'+msg+'</p>').insertAfter($el);
-      }
-    }
+      const $c=$el.next('.select2-container'); $c.addClass('error'); if(!$c.next('.field-error').length){ $('<p class="field-error">'+msg+'</p>').insertAfter($c); }
+    } else { $el.addClass('error-ring'); if(!$el.next('.field-error').length){ $('<p class="field-error">'+msg+'</p>').insertAfter($el); } }
   }
-  function getRequiredFields(){
-    return $('#lec-form').find('select[required], input[required], textarea[required]')
-                         .filter(function(){ return !this.disabled; });
-  }
-  function isEmptyField($el){
+  function getRequiredFields(){ return $('#lec-form').find('select[required], input[required], textarea[required]').filter(function(){ return !this.disabled; }); }
+  function isEmpty($el){
     if ($el.is(':checkbox')) return !$el.is(':checked');
-    if ($el.is(':radio'))   return $(`input[name="${$el.attr('name')}"]:checked`).length === 0;
-    const v = $el.val();
-    if (Array.isArray(v)) return v.length === 0;
-    return !v || String(v).trim() === '';
+    if ($el.is(':radio')) return $(`input[name="${$el.attr('name')}"]:checked`).length===0;
+    const v=$el.val(); return Array.isArray(v)? v.length===0 : (!v || String(v).trim()==='');
   }
-  function validateRequired(){
-    let ok = true;
-    getRequiredFields().each(function(){
-      const $el = $(this);
-      clearErrorFor($el);
-      if (isEmptyField($el)){
-        showError($el, 'Campo obrigatório');
-        ok = false;
-      }
-    });
-    return ok;
-  }
-  function bindValidationListeners(){
-    getRequiredFields().each(function(){
-      const $el = $(this);
-      if ($el.hasClass('select2-hidden-accessible')){
-        $el.off('.formv')
-           .on('select2:select.formv select2:clear.formv change.formv', ()=>clearErrorFor($el));
-      } else if ($el.is(':checkbox') || $el.is(':radio')){
-        $(`input[name="${$el.attr('name')}"]`).off('.formv').on('change.formv', ()=>clearErrorFor($el));
-      } else {
-        $el.off('.formv').on('input.formv change.formv', ()=>clearErrorFor($el));
-      }
-    });
-  }
-  bindValidationListeners();
+  function bindValidation(){ getRequiredFields().each(function(){ const $el=$(this);
+    if ($el.hasClass('select2-hidden-accessible')) $el.off('.v').on('select2:select.v select2:clear.v change.v', ()=>clearErrorFor($el));
+    else if ($el.is(':checkbox,:radio')) $(`input[name="${$el.attr('name')}"]`).off('.v').on('change.v', ()=>clearErrorFor($el));
+    else $el.off('.v').on('input.v change.v', ()=>clearErrorFor($el));
+  });}
+  bindValidation();
 
   $('#lec-form').on('submit', function(e){
-    // bloqueia o envio e o refresh se houver faltantes
-    if (!validateRequired()){
-      e.preventDefault();
-      const $firstErr = $('.field-error').first();
-      if ($firstErr.length){
-        $('html,body').animate({scrollTop: $firstErr.offset().top - 120}, 250);
-      }
-    }
+    let ok = true;
+    getRequiredFields().each(function(){ const $el=$(this); clearErrorFor($el); if(isEmpty($el)){ showError($el,'Campo obrigatório'); ok=false; } });
+    if(!ok){ e.preventDefault(); const $first=$('.field-error').first(); if($first.length){ $('html,body').animate({scrollTop:$first.offset().top-120},250); } }
   });
 });
 </script>
