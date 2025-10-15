@@ -48,12 +48,12 @@ class FilaUpdateForm(forms.ModelForm):
             "paciente",
             "medico",
             "prioridade",
+            "prioridade_justificativa",
             "medida_judicial",
             "situacao",
             "observacoes",
             "data_novo_contato",
             "motivo_alteracao",
-            # Incluindo os novos campos
             "judicial_numero",
             "judicial_descricao",
             "judicial_anexos",
@@ -78,6 +78,7 @@ class FilaUpdateForm(forms.ModelForm):
         }
         help_texts = {
             "prioridade": "Selecione a prioridade conforme a regra do serviço.",
+            "prioridade_justificativa": "Campo obrigatóri caso a prioridade não seja 'Sem Prioridade'",
             "medida_judicial": "Marque se há decisão judicial aplicável.",
             "situacao": "Estado atual do paciente na fila.",
             "observacoes": "Anotações internas/observações livres.",
@@ -89,8 +90,7 @@ class FilaUpdateForm(forms.ModelForm):
         # Ordem dos campos: Incluir os campos judiciais no fluxo
         desired = [
             "especialidade", "procedimento", "paciente", "medico", # Campos travados
-            "prioridade", "medida_judicial",
-            # Novos campos judiciais que serão movidos
+            "prioridade", "prioridade_justificativa", "medida_judicial",
             "judicial_numero", "judicial_descricao", "judicial_anexos",
             "situacao", "observacoes", "data_novo_contato", "motivo_alteracao"
         ]
@@ -119,7 +119,6 @@ class FilaUpdateForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
-        # ... (restante do clean, inalterado)
         
         # impede mudanças silenciosas via HTML nos campos travados
         for name in self.LOCKED_FIELDS:
@@ -132,6 +131,14 @@ class FilaUpdateForm(forms.ModelForm):
         if "motivo_alteracao" in self.fields and not motivo:
             self.add_error("motivo_alteracao",
                            "Informe o motivo da alteração.")
+
+        # exige explicação da prioridade
+        prioridade = (cleaned.get("prioridade") or "").strip()
+        prioridade_justificativa = (cleaned.get("prioridade_justificativa") or "").strip()
+        if prioridade != "SEM" and prioridade_justificativa is "":
+            self.add_error("prioridade_justificativa",
+                           "Informe o motivo dessa prioridade.")
+            
         return cleaned
 
 class FilaCreateForm(forms.ModelForm):
@@ -199,11 +206,11 @@ class FilaCreateForm(forms.ModelForm):
         model = ListaEsperaCirurgica
         fields = [
             "prioridade",
+            "prioridade_justificativa",
             "medida_judicial",
             "situacao",
             "observacoes",
             "secondary_section_open",
-            # Adicionando os novos campos aqui
             "judicial_numero", 
             "judicial_descricao", 
             "judicial_anexos",
@@ -286,6 +293,13 @@ class FilaCreateForm(forms.ModelForm):
         if missing:
             raise forms.ValidationError(
                 "Preencha todos os campos obrigatórios.")
+        
+        # exige explicação da prioridade
+        prioridade = (cleaned.get("prioridade") or "").strip()
+        prioridade_justificativa = (cleaned.get("prioridade_justificativa") or "").strip()
+        if prioridade != "SEM" and prioridade_justificativa is "":
+            self.add_error("prioridade_justificativa",
+                           "Informe o motivo dessa prioridade.")
         return cleaned
 
     def save(self, commit: bool = True) -> ListaEsperaCirurgica:

@@ -208,6 +208,12 @@ class ListaEsperaCirurgica(models.Model):
         null=True,
         verbose_name="Anexos do Processo Judicial"
     )
+    prioridade_justificativa = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Justificativa da Prioridade",
+        help_text="Motivo pelo qual o paciente recebeu a prioridade informada."
+    )
 
     MOTIVO_SAIDA_CHOICES = [
         ('SUCESSO', 'Cirurgia realizada no HULW'),
