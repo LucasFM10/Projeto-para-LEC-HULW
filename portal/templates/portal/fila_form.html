@@ -1,267 +1,110 @@
-{% extends "portal/base_portal.html" %}
-{% block title %}Nova entrada · Fila{% endblock %}
+{% extends 'portal/base_portal.html' %}
+{% load static %} {% block title %}
+  {% if object %}Editar{% else %}Nova{% endif %} entrada · Fila
+{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-  <h1 class="text-2xl font-semibold">Nova entrada</h1>
-  <a href="{% url 'portal:fila_list' %}" class="px-3 py-2 rounded border text-sm">Voltar</a>
-</div>
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-semibold"> {% if object %}
+        Editar entrada
+      {% else %}
+        Nova entrada
+      {% endif %}
+    </h1> <a href="{% url 'portal:fila_list' %}" class="px-3 py-2 rounded border text-sm">Voltar</a>
+  </div>
 
-<form id="lec-form" method="post" class="bg-white border rounded-lg shadow-sm p-4 space-y-4" novalidate enctype="multipart/form-data">
-  {% csrf_token %}
+  <form id="lec-form" method="post" class="bg-white border rounded-lg shadow-sm p-4 space-y-4" novalidate enctype="multipart/form-data">
+    {% csrf_token %}
 
-  {% if form.non_field_errors %}
-    <div class="p-3 rounded bg-red-50 text-red-700 text-sm">{{ form.non_field_errors }}</div>
-  {% endif %}
+    {% if form.non_field_errors %}
+      <div class="p-3 rounded bg-red-50 text-red-700 text-sm">{{ form.non_field_errors }}</div>
+    {% endif %}
 
-  <div id="grid-campos" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    {% for field in form.visible_fields %}
-      
-      {% comment %} 
-      1. Campo Medida Judicial (checkbox): Ocupa 2 colunas e é o gatilho.
-      2. Campos Judiciais (numero, descricao, anexos): São renderizados com "hidden" e depois movidos pelo JS.
-      3. Outros campos: Mantêm 1 coluna.
-      {% endcomment %}
-      
-      {% if field.name == 'medida_judicial' %}
-        <div id="field-wrapper-{{ field.id_for_label }}" class="md:col-span-2">
-          <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">
-            {{ field.label }}
-          </label>
-          {{ field }}
-          {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
-          {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
-        </div>
+    <div id="grid-campos" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {% for field in form.visible_fields %}
         
-        <div id="judicial-fields-block-full" class="hidden md:col-span-2 border border-yellow-400 bg-yellow-50 rounded-md p-4 mt-4">
-            <h3 class="text-lg font-semibold text-yellow-800 mb-4">Dados do Processo Judicial</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="judicial-grid">
-                </div>
-            <p class="text-xs text-gray-500 mt-3">Preencha o número, descrição e anexe documentos relevantes.</p>
-        </div>
+        {# ======================================================== #}
+        {#           SEÇÃO DE PRIORIDADE (Largura Total)          #}
+        {# ======================================================== #}
 
-      {% elif field.name in "judicial_numero,judicial_descricao,judicial_anexos" %}
-        <div id="field-wrapper-{{ field.id_for_label }}" class="judicial-field-temp-wrapper hidden"> 
-            <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">
-                {{ field.label }}
-            </label>
+        {% if field.name == 'prioridade' %}
+          <div id="field-wrapper-{{ field.id_for_label }}" class="md:col-span-2">
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">{{ field.label }}</label>
             {{ field }}
             {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
             {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
-        </div>
-      {% else %}
-        <div id="field-wrapper-{{ field.id_for_label }}">
-          <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">
-            {{ field.label }}
-          </label>
-          {{ field }}
-          {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
-          {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
-        </div>
-      {% endif %}
-    {% endfor %}
-  </div>
+          </div>
 
-  <div class="flex items-center justify-end gap-2 pt-2">
-    <a href="{% url 'portal:fila_list' %}" class="px-3 py-2 rounded border text-sm">Cancelar</a>
-    <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">
-      Criar entrada
-    </button>
-  </div>
-</form>
+          <div id="prioridade-fields-block-full" class="hidden md:col-span-2 border border-yellow-400 bg-yellow-50 rounded-md p-4 mt-2">
+            <h3 class="text-lg font-semibold text-yellow-800 mb-4">Justificativa da Prioridade</h3>
+            <div class="grid grid-cols-1 gap-4" id="prioridade-grid">
+                </div>
+          </div>
 
-<style>
-  /* inputs padrão */
-  form input:not([type="checkbox"]):not([type="radio"]),
-  form select, form textarea{ width:100%; border:1px solid #e5e7eb; border-radius:.375rem; padding:.5rem .75rem; background:#fff; }
-  form input:not([type="checkbox"]):not([type="radio"]):focus,
-  form select:focus, form textarea:focus{ outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.2); }
-  /* Estilo para que o checkbox fique alinhado com o label */
-  label[for="id_medida_judicial"]{ display: inline-flex; align-items: center; } 
-  form input[type="checkbox"]{ width:auto; height:1rem; margin-right:.5rem; }
+        {# O campo de justificativa renderiza escondido (para ser movido) #}
+        {% elif field.name == 'prioridade_justificativa' %}
+          <div id="field-wrapper-{{ field.id_for_label }}" class="prioridade-field-temp-wrapper hidden">
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
+            {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
+          </div>
 
-  /* erros */
-  .field-error{font-size:.875rem; color:#dc2626; margin-top:.25rem}
-  .error-ring{border-color:#dc2626!important; box-shadow:0 0 0 1px #dc2626 inset!important}
-  .select2-container.error .select2-selection{ border-color:#dc2626!important; box-shadow:0 0 0 1px #dc2626 inset!important }
+        {# ======================================================== #}
+        {#             SEÇÃO JUDICIAL (Largura Total)             #}
+        {# ======================================================== #}
 
-  /* Select2 “cara” de Tailwind */
-  .select2-container{ width:100%!important; }
-  .select2-container .select2-selection{ min-height:38px; border:1px solid #e5e7eb; border-radius:.375rem; background:#fff; }
-  .select2-container--default .select2-selection--single .select2-selection__rendered{ line-height:36px; padding-left:.5rem; padding-right:2rem; }
-  .select2-container--default .select2-selection--single .select2-selection__arrow{ height:36px; right:.5rem; }
-  .select2-dropdown{ border:1px solid #e5e7eb; box-shadow:0 4px 16px rgba(0,0,0,.06); }
-  .select2-results__option{ padding:.5rem .75rem; }
-  .select2-results__option--highlighted{ background:#eef2ff; color:#111827; }
-  .select2-search--dropdown .select2-search__field{ border:1px solid #e5e7eb; border-radius:.375rem; padding:.375rem .5rem; }
+        {% elif field.name == 'medida_judicial' %}
+          <div id="field-wrapper-{{ field.id_for_label }}" class="md:col-span-2">
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
+            {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
+          </div>
 
-  /* botão compacto */
-  .btn-ghost-xs{padding:.25rem .5rem; font-size:.75rem; border:1px solid #e5e7eb; border-radius:.375rem;}
-</style>
+          <div id="judicial-fields-block-full" class="hidden md:col-span-2 border border-yellow-400 bg-yellow-50 rounded-md p-4 mt-4">
+            <h3 class="text-lg font-semibold text-yellow-800 mb-4">Dados do Processo Judicial</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="judicial-grid">
+              </div>
+            <p class="text-xs text-gray-500 mt-3">Preencha o número, descrição e anexe documentos relevantes.</p>
+          </div>
 
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        {# Os campos judiciais renderizam escondidos (para serem movidos) #}
+        {% elif field.name in 'judicial_numero,judicial_descricao,judicial_anexos' %}
+          <div id="field-wrapper-{{ field.id_for_label }}" class="judicial-field-temp-wrapper hidden">
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
+            {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
+          </div>
 
-<script>
-$(function(){
-  // ------------------ i18n Select2 ------------------
-  const s2pt = { inputTooShort: a=>`Digite pelo menos ${a.minimum} caractere(s)…`, errorLoading: ()=>'Erro ao carregar os resultados.', loadingMore: ()=>'Carregando mais resultados…', noResults: ()=>'Nenhum resultado encontrado.', searching: ()=>'Buscando…', removeAllItems: ()=>'Limpar seleção' };
+        {# ======================================================== #}
+        {#                   OUTROS CAMPOS (NORMAIS)              #}
+        {# ======================================================== #}
+        {% else %}
+          <div id="field-wrapper-{{ field.id_for_label }}">
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
+            {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
 
-  // map/Factory
-  const mapResults = (data)=>({ results: (data?.results ?? data ?? []).map(it=>({ id: String(it.id ?? it.codigo ?? it.cod_especialidade ?? it.matricula ?? ''), text: String(it.text ?? it.nome ?? it.nome_especialidade ?? '') })), pagination:{ more: !!(data?.pagination&&data.pagination.more) }});
-  function makeAjaxSelect2($el, { url, placeholder, getParams, dependsOn }){
-    $el.select2({ placeholder, allowClear:true, width:'100%', language:s2pt,
-      ajax:{ url, dataType:'json', delay:300,
-        transport: (p, ok, fail)=> (dependsOn && !dependsOn.val()) ? null : $.ajax(p).then(ok).catch(fail),
-        data: p => getParams ? getParams(p) : ({ term:p.term, page:p.page||1, limit:10 }),
-        processResults: mapResults, cache:true }});
-  }
-  const setProcEnabled = (enabled,$sel)=>{ $sel.prop('disabled',!enabled).trigger('change.select2'); const $ph=$sel.next('.select2-container').find('.select2-selection__placeholder'); if($ph.length){ $ph.text(enabled?'Digite para buscar procedimento…':'Selecione uma especialidade primeiro…'); }};
+    <div class="flex items-center justify-end gap-2 pt-2">
+      <a href="{% url 'portal:fila_list' %}" class="px-3 py-2 rounded border text-sm">Cancelar</a>
+      <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">
+        {% if object %}
+          Salvar alterações
+        {% else %}
+          Criar entrada
+        {% endif %}
+      </button>
+    </div>
+  </form>
+{% endblock %}
 
-  // --------- Campos principais ---------
-  const $esp  = $('#id_especialidade_api');
-  const $proc = $('#id_procedimento_api');
-  const $med  = $('#id_medico_api');
-  const $pac  = $('#id_prontuario');
-
-  if ($esp.length) makeAjaxSelect2($esp, { url:"{% url 'fila_cirurgica:especialidade_api_autocomplete' %}", placeholder:'Digite para buscar especialidade…', getParams:p=>({ term:p.term, page:p.page||1, limit:10 }) });
-
-  if ($proc.length){
-    makeAjaxSelect2($proc, { url:"{% url 'fila_cirurgica:procedimento_api_autocomplete' %}", placeholder:'Selecione uma especialidade primeiro…', dependsOn:$esp, getParams:p=>({ term:p.term, page:p.page||1, limit:10, especialidade_id:$esp.val()||'' }) });
-    if ($esp.length) setProcEnabled(!!$esp.val(), $proc);
-    $esp.on('change', ()=>{ $proc.val(null).trigger('change'); setProcEnabled(!!$esp.val(), $proc); });
-  }
-
-  if ($med.length) makeAjaxSelect2($med, { url:"{% url 'fila_cirurgica:medico_api_autocomplete' %}", placeholder:'Digite para buscar médico…', getParams:p=>({ term:p.term, page:p.page||1, limit:10 }) });
-  if ($pac.length) makeAjaxSelect2($pac, { url:"{% url 'fila_cirurgica:paciente_api_autocomplete' %}", placeholder:'Digite nº ou nome do paciente…', getParams:p=>({ term:p.term, page:p.page||1, limit:10 }) });
-
-  // ============================
-  //      Secção Secundária (Existente)
-  // ============================
-  const $esp2  = $('#id_especialidade_secundario_api');
-  const $proc2 = $('#id_procedimento_secundario_api');
-  const $hiddenOpen = $('#id_secondary_section_open');
-
-  if ($esp2.length || $proc2.length){
-    // [CÓDIGO DE INJEÇÃO E LÓGICA DE TOGGLE PARA PROCEDIMENTO SECUNDÁRIO]
-    const $wrapProc = $proc.closest('div');
-    const $ui = $(`
-      <div id="secondary-ui" class="mt-2">
-        <button type="button" id="toggle-secondary" class="btn-ghost-xs inline-flex items-center gap-1">
-          <span id="ico">+</span> Proc. secundário
-        </button>
-        <div id="secondary-block" class="hidden mt-2">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="secondary-grid"></div>
-          <p class="text-xs text-gray-500 mt-1">Opcional, filtrado pela especialidade selecionada.</p>
-        </div>
-      </div>`);
-    $wrapProc.append($ui);
-
-    const moveWrap = ($el)=>{ if($el.length){ $el.closest('div').appendTo('#secondary-grid'); } };
-    moveWrap($esp2); moveWrap($proc2);
-
-    if ($esp2.length) makeAjaxSelect2($esp2, { url:"{% url 'fila_cirurgica:especialidade_api_autocomplete' %}", placeholder:'Digite para buscar especialidade (sec.)…', getParams:p=>({ term:p.term, page:p.page||1, limit:10 }) });
-    if ($proc2.length){
-      makeAjaxSelect2($proc2, { url:"{% url 'fila_cirurgica:procedimento_api_autocomplete' %}", placeholder:'Selecione uma especialidade primeiro…', dependsOn:$esp2, getParams:p=>({ term:p.term, page:p.page||1, limit:10, especialidade_id:$esp2.val()||'' }) });
-      setProcEnabled(!!$esp2.val(), $proc2);
-      $esp2.on('change', ()=>{ $proc2.val(null).trigger('change'); setProcEnabled(!!$esp2.val(), $proc2); });
-    }
-
-    const $block = $('#secondary-block'), $ico = $('#ico');
-    function openSec(){ $block.removeClass('hidden'); $ico.text('–'); if($hiddenOpen.length) $hiddenOpen.val('on'); }
-    function closeSec(){ $block.addClass('hidden'); $ico.text('+'); if($hiddenOpen.length) $hiddenOpen.val(''); }
-    $('#toggle-secondary').on('click', ()=> $block.hasClass('hidden') ? openSec() : closeSec());
-
-    const shouldOpen = ($hiddenOpen.length && ($hiddenOpen.val()==='on')) || ($esp2.length && $esp2.val()) || ($proc2.length && $proc2.val());
-    if (shouldOpen) openSec();
-  }
-
-  // ============================
-  //      LÓGICA JUDICIAL (CORRIGIDA PARA POSICIONAMENTO)
-  // ============================
-  const $checkboxJudicial  = $('#id_medida_judicial'); 
-  const $judicialBlock     = $('#judicial-fields-block-full'); 
-  const $judicialGrid      = $('#judicial-grid');
-
-  // CAMPOS A SEREM MOVIDOS
-  const $judicialNumero    = $('#id_judicial_numero');     
-  const $judicialDescricao = $('#id_judicial_descricao');
-  const $judicialAnexos    = $('#id_judicial_anexos'); 
-  
-  const judicialFields = [$judicialNumero, $judicialDescricao, $judicialAnexos];
-
-  if ($checkboxJudicial.length && $judicialBlock.length) {
-      
-      // 1. Mover os campos originais para dentro do bloco de expansão
-      judicialFields.forEach(function($field) {
-          if ($field.length) {
-              // Encontra o wrapper original (o div que contém o label e o input)
-              const $wrapper = $field.closest('div');
-              
-              // Move o wrapper INTEIRO para a grid de expansão
-              $wrapper.appendTo($judicialGrid); 
-          }
-      });
-      
-      // 2. Função de mostrar/esconder
-      function updateJudicialVisibility() {
-          if ($checkboxJudicial.is(':checked')) {
-              $judicialBlock.removeClass('hidden'); 
-          } else {
-              $judicialBlock.addClass('hidden');
-          }
-      }
-
-      // 3. Aplicar placeholder (apenas se os campos existirem e estiverem na judicial-grid)
-      $('#judicial-grid #id_judicial_numero').attr('placeholder', 'Insira o número do processo...');
-      $('#judicial-grid #id_judicial_descricao').attr('placeholder', 'Descreva o teor da medida judicial...');
-
-
-      // 4. Ligar eventos e carregar estado inicial
-      $checkboxJudicial.on('change', updateJudicialVisibility);
-      updateJudicialVisibility();
-      
-      // 5. Exibir os campos que foram movidos (eles estavam escondidos pelo loop)
-      judicialFields.forEach(function($field) {
-          if ($field.length) {
-             $field.closest('div').removeClass('hidden'); 
-          }
-      });
-  }
-
-
-  // ============================
-  // Validação client-side básica (EXISTENTE)
-  // ============================
-  function clearErrorFor($el){
-    if ($el.hasClass('select2-hidden-accessible')){
-      const $c = $el.next('.select2-container'); $c.removeClass('error'); $c.next('.field-error').remove();
-    } else { $el.removeClass('error-ring'); $el.next('.field-error').remove(); }
-  }
-  function showError($el,msg){
-    if ($el.hasClass('select2-hidden-accessible')){
-      const $c=$el.next('.select2-container'); $c.addClass('error'); if(!$c.next('.field-error').length){ $('<p class="field-error">'+msg+'</p>').insertAfter($c); }
-    } else { $el.addClass('error-ring'); if(!$el.next('.field-error').length){ $('<p class="field-error">'+msg+'</p>').insertAfter($el); } }
-  }
-  function getRequiredFields(){ return $('#lec-form').find('select[required], input[required], textarea[required]').filter(function(){ return !this.disabled; }); }
-  function isEmpty($el){
-    if ($el.is(':checkbox')) return !$el.is(':checked');
-    if ($el.is(':radio')) return $(`input[name="${$el.attr('name')}"]:checked`).length===0;
-    const v=$el.val(); return Array.isArray(v)? v.length===0 : (!v || String(v).trim()==='');
-  }
-  function bindValidation(){ getRequiredFields().each(function(){ const $el=$(this);
-    if ($el.hasClass('select2-hidden-accessible')) $el.off('.v').on('select2:select.v select2:clear.v change.v', ()=>clearErrorFor($el));
-    else if ($el.is(':checkbox,:radio')) $(`input[name="${$el.attr('name')}"]`).off('.v').on('change.v', ()=>clearErrorFor($el));
-    else $el.off('.v').on('input.v change.v', ()=>clearErrorFor($el));
-  });}
-  bindValidation();
-
-  $('#lec-form').on('submit', function(e){
-    let ok = true;
-    getRequiredFields().each(function(){ const $el=$(this); clearErrorFor($el); if(isEmpty($el)){ showError($el,'Campo obrigatório'); ok=false; } });
-    if(!ok){ e.preventDefault(); const $first=$('.field-error').first(); if($first.length){ $('html,body').animate({scrollTop:$first.offset().top-120},250); } }
-  });
-});
-</script>
+{% block extra_js %}
+  <script src="{% static 'js/fila_form_logic.js' %}"></script>
 {% endblock %}

@@ -1,3 +1,44 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * PROBLEMA 1: Inputs feios
+ * Aplica o estilo base do Tailwind CSS para inputs, selects e textareas.
+*/
+form input:not([type="checkbox"]):not([type="radio"]),
+form select,
+form textarea {
+    @apply w-full border-gray-300 rounded-md shadow-sm;
+    @apply focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50;
+}
+
+/* * Garante que o <select> original (escondido) do Select2 
+ * não seja afetado pelas regras acima.
+*/
+form select[class*="select2-hidden-accessible"] {
+    @apply !border-0 !w-auto !h-auto !p-0 !m-0;
+}
+
+
+/*
+ * PROBLEMA 2: Erro "Feio"
+ * Define as classes de erro que o seu fila_form_logic.js 
+ * já está aplicando.
+*/
+
+/* O texto "Campo obrigatório" (preto e feio) */
+.field-error {
+    @apply text-sm text-red-600 mt-1;
+}
+
+/* A borda vermelha no input/select/textarea com erro */
+.error-ring {
+    @apply border-red-500;
+    @apply focus:border-red-500 focus:ring-red-500;
+}
+
+/* A borda vermelha para o container do Select2 com erro */
+.select2-container.error .select2-selection {
+    @apply border-red-500;
+}

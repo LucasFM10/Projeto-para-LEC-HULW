@@ -432,13 +432,6 @@ class ListaEsperaCirurgicaAdmin(SimpleHistoryAdmin, ModelAdmin):
         if obj and not obj.ativo:   # exemplo
             return False            # abre read-only
         return super().has_delete_permission(request, obj)
-
-    class Media:
-        css = {
-            "all": (
-                "https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.34.1/dist/tabler-icons.min.css",
-            )
-        }
         
     @admin.display(description="Ações", ordering=False)
     def acoes(self, obj):

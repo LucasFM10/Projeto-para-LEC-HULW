@@ -1,15 +1,15 @@
 // tailwind.config.js
 module.exports = {
+  darkMode: 'selector',
   content: [
-    "./templates/**/*.html",            // se tiver uma pasta templates/ global
-    "./**/templates/**/*.html",         // templates dentro dos apps
+    "./templates/**/*.html",            
+    "./**/templates/**/*.html",        
     "./**/*.js",
     "./**/*.ts",
-    // opcional: se você gerar classes em .py ou usa componentes que injetam HTML
-    // "./**/*.py",
   ],
   theme: {
     extend: {},
-  },
-  plugins: [],
+  },plugins: [
+    require('@tailwindcss/forms'),
+  ],
 }

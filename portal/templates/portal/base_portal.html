@@ -6,35 +6,21 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>{% block title %}Portal{% endblock %}</title>
 
-  {# Tailwind compilado do seu projeto (mantenha) #}
+  <link rel="stylesheet" href="{% static 'vendor/css/select2.min.css' %}">
   <link rel="stylesheet" href="{% static 'dist/main.css' %}">
   <link rel="icon" href="{% static 'img/favicon.png' %}">
   <meta name="theme-color" content="#10b981">
-
-  {# Ícones Google #}
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400" rel="stylesheet">
-
-  {# Select2 (CSS) #}
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
 
   <style>
     .material-symbols-outlined{vertical-align:middle}
-
-    /* ====== paleta rápida p/ integrar cinza + verde ====== */
     :root{
       --brand-50:#ecfdf5; --brand-100:#d1fae5; --brand-200:#a7f3d0; --brand-600:#059669; --brand-700:#047857;
     }
-
-    /* Mensagens (Django messages) */
     .msg{border-radius:.5rem;padding:.75rem}
     .msg--success{background:var(--brand-50);border:1px solid var(--brand-100);color:#065f46}
     .msg--error{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
     .msg--info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
-
-    /* Select2 com “cara” emerald */
-    .select2-container .select2-selection{
-      border:1px solid #e5e7eb;border-radius:.375rem;background:#fff;min-height:38px
-    }
     .select2-container--default .select2-results__option--highlighted[aria-selected]{
       background:var(--brand-100);color:#065f46
     }
@@ -42,15 +28,15 @@
       border-color:var(--brand-600); box-shadow:0 0 0 3px rgba(16,185,129,.2)
     }
   </style>
+
+  {% block extra_css %}{% endblock %}
 </head>
 <body class="min-h-screen bg-gray-50 text-gray-800">
 
-  <!-- =================== HEADER =================== -->
   <header class="bg-white border-b">
     <div class="max-w-7xl mx-auto px-4">
       <div class="h-16 flex items-center justify-between gap-4">
 
-        <!-- Branding + navegação desktop -->
         <div class="flex items-center gap-6">
           <a href="{% url 'portal:dashboard' %}" class="flex items-center gap-2 font-semibold">
             <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white">LEC</span>
@@ -58,71 +44,52 @@
           </a>
 
           <nav class="hidden md:flex items-center gap-4 text-sm">
-            <a href="{% url 'externo:consulta_posicao' %}" data-nav class="text-gray-600 hover:text-gray-900">Consulta Pública</a>
-            <a href="{% url 'portal:dashboard' %}" data-nav class="text-gray-600 hover:text-gray-900">Dashboard</a>
-            <a href="{% url 'portal:fila_list' %}" data-nav class="text-gray-600 hover:text-gray-900">Fila</a>
+            <a href="{% url 'externo:consulta_posicao' %}" data-nav class="text-gray-600 hover:text-gray-900 py-2">Consulta Pública</a>
+            {# Link do Dashboard agora tem data-nav-exact #}
+            <a href="{% url 'portal:dashboard' %}" data-nav data-nav-exact="true" class="text-gray-600 hover:text-gray-900 py-2">Dashboard</a>
+            <a href="{% url 'portal:fila_list' %}" data-nav class="text-gray-600 hover:text-gray-900 py-2">Fila</a>
             {% block header_nav_extra %}{% endblock %}
           </nav>
         </div>
 
-        <!-- Ações + usuário -->
         <div class="flex items-center gap-3">
           {% block header_actions %}{% endblock %}
-
           {% if request.user.is_authenticated %}
           <div class="relative" id="user-menu">
-            <button type="button" id="user-menu-button" aria-expanded="false" aria-haspopup="true"
-                    class="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-100">
+            <button type="button" id="user-menu-button" aria-expanded="false" aria-haspopup="true" class="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-100">
               <span class="material-symbols-outlined text-[20px]">account_circle</span>
-              <span class="text-sm max-w-[14rem] truncate">
-                {{ request.user.get_full_name|default:request.user.username }}
-              </span>
+              <span class="text-sm max-w-[14rem] truncate">{{ request.user.get_full_name|default:request.user.username }}</span>
               <span class="material-symbols-outlined text-[18px]">expand_more</span>
             </button>
-          
-            <div id="user-dropdown"
-                 class="absolute right-0 mt-2 w-64 bg-white border rounded shadow-md hidden">
+            <div id="user-dropdown" class="absolute right-0 mt-2 w-64 bg-white border rounded shadow-md hidden z-50">
               <div class="px-4 py-3 text-sm">
-                <div class="font-medium truncate">
-                  {{ request.user.get_full_name|default:request.user.username }}
-                </div>
-                {% if request.user.email %}
-                <div class="text-gray-500 truncate">{{ request.user.email }}</div>
-                {% endif %}
+                <div class="font-medium truncate">{{ request.user.get_full_name|default:request.user.username }}</div>
+                {% if request.user.email %}<div class="text-gray-500 truncate">{{ request.user.email }}</div>{% endif %}
               </div>
               <div class="border-t text-sm">
                 <a class="block px-4 py-2 hover:bg-gray-50" href="{% url 'portal:dashboard' %}">Dashboard</a>
                 <a class="block px-4 py-2 hover:bg-gray-50" href="{% url 'portal:fila_list' %}">Fila cirúrgica</a>
-                <form method="post" action="{% url 'portal:logout' %}" class="border-t">
-                  {% csrf_token %}
-                  <button type="submit" class="w-full text-left px-4 py-2 hover:bg-gray-50">Sair</button>
-                </form>
+                <form method="post" action="{% url 'portal:logout' %}" class="border-t">{% csrf_token %}<button type="submit" class="w-full text-left px-4 py-2 hover:bg-gray-50">Sair</button></form>
               </div>
             </div>
           </div>
           {% else %}
-            <a href="{% url 'portal:login' %}?next={{ request.path|urlencode }}"
-               class="px-3 py-1.5 rounded bg-emerald-600 text-white text-sm hover:bg-emerald-700">Entrar</a>
+            <a href="{% url 'portal:login' %}?next={{ request.path|urlencode }}" class="px-3 py-1.5 rounded bg-emerald-600 text-white text-sm hover:bg-emerald-700">Entrar</a>
           {% endif %}
-
-          <!-- menu mobile -->
-          <button class="md:hidden p-2 rounded hover:bg-gray-100" id="btn-mobile" aria-label="Abrir menu">
-            <span class="material-symbols-outlined">menu</span>
-          </button>
+          <button class="md:hidden p-2 rounded hover:bg-gray-100" id="btn-mobile" aria-label="Abrir menu"><span class="material-symbols-outlined">menu</span></button>
         </div>
       </div>
 
-      <!-- nav mobile -->
       <nav id="mobile-nav" class="md:hidden hidden pb-3">
         <a class="block px-2 py-2 rounded hover:bg-gray-50" href="{% url 'externo:consulta_posicao' %}" data-nav>Consulta Pública</a>
-        <a class="block px-2 py-2 rounded hover:bg-gray-50" href="{% url 'portal:dashboard' %}" data-nav>Dashboard</a>
+        {# Link do Dashboard mobile também tem data-nav-exact #}
+        <a class="block px-2 py-2 rounded hover:bg-gray-50" href="{% url 'portal:dashboard' %}" data-nav data-nav-exact="true">Dashboard</a>
         <a class="block px-2 py-2 rounded hover:bg-gray-50" href="{% url 'portal:fila_list' %}" data-nav>Fila</a>
         {% block header_nav_extra_mobile %}{% endblock %}
       </nav>
     </div>
   </header>
-
-  <!-- =================== MAIN =================== -->
+  
   <main class="max-w-7xl mx-auto px-4 py-6">
     {% if messages %}
       {% for message in messages %}
@@ -131,7 +98,6 @@
         </div>
       {% endfor %}
     {% endif %}
-
     {% block breadcrumb %}{% endblock %}
     {% block content %}{% endblock %}
   </main>
@@ -140,37 +106,66 @@
     © {% now "Y" %} HU Lauro Wanderley — Fila Cirúrgica
   </footer>
 
-  <!-- jQuery + Select2 (JS) -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js"></script>
+  <script src="{% static 'vendor/js/jquery.min.js' %}"></script>
+  <script src="{% static 'vendor/js/select2.full.min.js' %}"></script>
 
+  {% block extra_js %}{% endblock %}
+  
   <script>
-
+    // Lógica do menu dropdown do usuário
     document.addEventListener('DOMContentLoaded', function() {
       const userMenuButton = document.getElementById('user-menu-button');
       const userDropdown = document.getElementById('user-dropdown');
+      
+      if (userMenuButton && userDropdown) {
+        userMenuButton.addEventListener('click', function() {
+          userDropdown.classList.toggle('hidden');
+        });
 
-      // Abre/fecha o menu ao clicar no botão
-      userMenuButton.addEventListener('click', function() {
-        userDropdown.classList.toggle('hidden');
-      });
-
-      // Fecha o menu ao clicar fora dele
-      document.addEventListener('click', function(event) {
-        const isClickInside = userMenuButton.contains(event.target) || userDropdown.contains(event.target);
-        if (!isClickInside && !userDropdown.classList.contains('hidden')) {
-          userDropdown.classList.add('hidden');
-        }
-      });
+        // Fecha o dropdown se clicar fora
+        document.addEventListener('click', function(event) {
+          const isClickInside = userMenuButton.contains(event.target) || userDropdown.contains(event.target);
+          if (!isClickInside && !userDropdown.classList.contains('hidden')) {
+            userDropdown.classList.add('hidden');
+          }
+        });
+      }
     });
-    // marca link ativo e controla menu mobile
+    
+    // Lógica do menu mobile e marcação de link ativo (ATUALIZADA)
     (function(){
-      var path = "{{ request.path|escapejs }}";
+      var path = "{{ request.path|escapejs }}"; // Pega o caminho atual da URL
+      
+      // Itera sobre todos os links marcados com 'data-nav'
       document.querySelectorAll('a[data-nav]').forEach(function(a){
-        if (path.startsWith(a.getAttribute('href'))) {
-          a.classList.add('text-emerald-700','font-medium');
+        var linkHref = a.getAttribute('href');
+        var requiresExactMatch = a.getAttribute('data-nav-exact') === 'true'; // Verifica se precisa de match exato
+        var isActive = false;
+
+        if (requiresExactMatch) {
+          // Para links com data-nav-exact, faz correspondência exata
+          isActive = (path === linkHref);
+        } else {
+          // Para outros links, usa startsWith (como antes)
+          // Mas evita que o '/' (dashboard) corresponda a tudo
+          if (linkHref !== '/' || path === '/') {
+             isActive = path.startsWith(linkHref);
+          }
+        }
+
+        // Se o link for considerado ativo, aplica as classes
+        if (isActive) {
+          a.classList.add(
+            'text-emerald-700', // Cor do texto
+            'font-medium',      // Negrito
+            'border-b-2',       // Borda inferior
+            'border-emerald-600', // Cor da borda
+            'pb-1'              // Padding inferior
+          );
         }
       });
+
+      // Lógica para abrir/fechar o menu mobile
       var btn = document.getElementById('btn-mobile');
       var nav = document.getElementById('mobile-nav');
       if (btn && nav) btn.addEventListener('click', function(){ nav.classList.toggle('hidden'); });

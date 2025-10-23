@@ -452,125 +452,191 @@
       z-index: 9999;
     }
   </style>
+{% endblock %}
 
-  {# ---- Assets Select2 (ok manter CDNs) ---- #}
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
+{% block extra_js %}
   <script>
-    // Helper: normaliza payload {id,text} vindo da API
+    /**
+     * Normaliza os dados retornados pela API para o formato { results: [], pagination: {} }
+     * que o Select2 espera.
+     * Tenta encontrar as chaves 'id' e 'text' ou mapeia chaves comuns como
+     * 'codigo', 'cod_especialidade', 'matricula', 'nome', 'nome_especialidade'.
+     *
+     * @param {object|array} data - Os dados brutos da API.
+     * @param {string} idKey - A chave primária nos dados (opcional, tenta 'id').
+     * @param {string} textKey - A chave de texto nos dados (opcional, tenta 'text').
+     * @returns {object} Objeto formatado para Select2.
+     */
     function mapResults(data, idKey, textKey) {
-      const results = (data.results || data || []).map((it) => ({
-        id: String(it[idKey] ?? it.id ?? ''),
-        text: String(it[textKey] ?? it.text ?? '')
-      }))
-      return { results, pagination: { more: !!(data.pagination && data.pagination.more) } }
+      // Garante que 'data' seja um array, mesmo que a API retorne só o array ou um objeto { results: [...] }
+      const resultsArray = data.results || data || [];
+      
+      // Mapeia cada item do array para o formato { id: '...', text: '...' }
+      const results = resultsArray.map((it) => ({
+        id: String(it[idKey] ?? it.id ?? it.codigo ?? it.cod_especialidade ?? it.matricula ?? ''),
+        text: String(it[textKey] ?? it.text ?? it.nome ?? it.nome_especialidade ?? '')
+      }));
+      
+      // Retorna o objeto completo, incluindo a flag de paginação se existir
+      return { results, pagination: { more: !!(data.pagination && data.pagination.more) } };
     }
-    
-    // Helper: pré-preencher valores já selecionados caso o backend não devolva <option selected>
-    // Tenta buscar por ?ids=ID,ID,ID no mesmo endpoint (se você suportar isso); senão usa as <option selected> existentes.
+
+    /**
+     * (Opcional) Pré-preenche um Select2 com os valores selecionados atualmente.
+     * Útil quando a página recarrega após uma busca (GET) e o Django
+     * renderiza o <select> com <option value="ID" selected></option>, mas sem o texto.
+     * Esta função tenta buscar os textos na API usando os IDs.
+     *
+     * @param {jQuery} $el - O elemento jQuery do <select>.
+     * @param {string} endpoint - A URL da API de autocomplete.
+     * @param {string} idsParam - O nome do parâmetro de query para passar os IDs (ex: 'ids').
+     */
     async function prefillSelect2($el, endpoint, idsParam = 'ids') {
-      const currentVals = ($el.val() || []).filter(Boolean)
-      if (!currentVals.length) return
-    
-      // Se já existem <option selected> com texto, não precisa fazer nada
+      // Pega os valores atuais do select (pode ser um array se for múltiplo)
+      const currentVals = ($el.val() || []).filter(Boolean); // filter(Boolean) remove nulos/vazios
+      if (!currentVals.length) return; // Se não há valores, não faz nada
+
+      // Verifica se as <option> selecionadas já têm texto. Se sim, o Django fez o trabalho.
       const haveText = $el
         .find('option:selected')
         .toArray()
-        .every((opt) => (opt.text || '').trim().length)
-      if (haveText) return
-    
+        .every((opt) => (opt.text || '').trim().length > 0);
+      if (haveText) return; // Se já têm texto, não precisa buscar na API
+
       try {
-        const url = new URL(endpoint, window.location.origin)
-        url.searchParams.set(idsParam, currentVals.join(','))
-        const res = await fetch(url.toString())
-        if (!res.ok) return
-        const data = await res.json()
-        const items = data.results || data || []
+        // Monta a URL para buscar os itens pelos IDs
+        const url = new URL(endpoint, window.location.origin); // Garante URL absoluta
+        url.searchParams.set(idsParam, currentVals.join(',')); // Adiciona "?ids=ID1,ID2,..."
+        
+        // Faz a requisição à API
+        const res = await fetch(url.toString());
+        if (!res.ok) return; // Falha silenciosa se a API não responder bem
+        
+        const data = await res.json();
+        const items = data.results || data || []; // Pega a lista de resultados
+        
+        // Para cada item retornado pela API...
         items.forEach((it) => {
-          const id = String(it.id || it.codigo || it.cod_especialidade || it.matricula)
-          const text = String(it.text || it.nome || it.nome_especialidade)
+          // Extrai o ID e o Texto (usando as chaves comuns)
+          const id = String(it.id || it.codigo || it.cod_especialidade || it.matricula);
+          const text = String(it.text || it.nome || it.nome_especialidade);
+          
+          // Se encontrou ID e Texto...
           if (id && text) {
-            const opt = new Option(text, id, true, true)
-            $el.append(opt).trigger('change')
+            // Cria uma nova <option> com 'selected=true'
+            const opt = new Option(text, id, true, true);
+            // Adiciona a nova <option> ao <select> e avisa o Select2 que mudou
+            $el.append(opt).trigger('change'); 
           }
-        })
+        });
       } catch (e) {
-        /* silencioso */
+        console.error("Erro ao pré-preencher Select2:", e); // Loga o erro, mas não quebra a página
       }
     }
-    
-    // Factory: inicializa Select2 AJAX com boas práticas
+
+    /**
+     * Função "Factory" para inicializar um campo Select2 com busca via AJAX.
+     * Configura placeholders, internacionalização (i18n), chamada AJAX,
+     * e mapeamento de resultados.
+     *
+     * @param {jQuery} $el - O elemento jQuery do <select> a ser inicializado.
+     * @param {object} config - Objeto de configuração.
+     * @param {string} config.url - A URL da API de autocomplete.
+     * @param {string} config.placeholder - Texto a ser exibido quando nada está selecionado.
+     * @param {number} [config.minLen=2] - Mínimo de caracteres para disparar a busca.
+     * @param {function} [config.getParams] - Função para customizar os parâmetros da query AJAX.
+     * @param {function} [config.mapFn] - Função para customizar o mapeamento da resposta da API.
+     */
     function makeAjaxSelect2($el, { url, placeholder, minLen = 2, getParams, mapFn }) {
       $el.select2({
-        width: '100%',
-        placeholder,
-        allowClear: true, // mostra (x)
-        closeOnSelect: false, // múltiplo: marcar vários sem fechar
-        dropdownParent: $('#filters'), // evita z-index estranho
+        width: '100%', // Ocupa a largura total do container
+        placeholder,   // Texto de placeholder
+        allowClear: true, // Mostra o botão 'x' para limpar a seleção
+        
+        // Para selects múltiplos, permite selecionar vários itens sem fechar o dropdown
+        closeOnSelect: false, 
+        
+        // Define onde o dropdown deve ser anexado no DOM.
+        // Usar '#filters' pode ajudar com problemas de z-index, mas removemos por causar problemas.
+        // dropdownParent: $('#filters'), // <-- REMOVIDO/COMENTADO
+
+        // Traduções para Português do Brasil
         language: {
           inputTooShort: () => `Digite ao menos ${minLen} caractere(s)…`,
           errorLoading: () => 'Erro ao carregar resultados.',
           loadingMore: () => 'Carregando mais…',
           noResults: () => 'Nenhum resultado.',
           searching: () => 'Buscando…',
-          removeAllItems: () => 'Limpar seleção'
+          removeAllItems: () => 'Limpar seleção' // Para o botão 'x' do múltiplo
         },
+        
+        // Configuração da chamada AJAX
         ajax: {
-          url,
-          dataType: 'json',
-          delay: 250,
+          url, // URL da API fornecida na configuração
+          dataType: 'json', // Tipo de resposta esperado
+          delay: 250, // Aguarda 250ms após o usuário parar de digitar antes de buscar
+          
+          // Função que monta os parâmetros da query string
           data: (params) => (getParams ? getParams(params) : { term: params.term, page: params.page || 1 }),
+          
+          // Função que processa a resposta da API antes de exibi-la
           processResults: (data, params) => (mapFn ? mapFn(data, params) : mapResults(data, 'id', 'text')),
-          cache: true
+          
+          cache: true // Permite que o navegador/Select2 faça cache das respostas
         },
-        // Classes utilitárias (Select2 4.1+)
-        selectionCssClass: 'border rounded-md',
-        dropdownCssClass: 'rounded-md'
-      })
+        
+        // Adiciona classes CSS customizadas (Select2 v4.1+) para melhor integração visual
+        selectionCssClass: 'border rounded-md', // Classe no container principal
+        dropdownCssClass: 'rounded-md'         // Classe no dropdown
+      });
     }
-    
+
+    // Código principal que roda quando o DOM está pronto (jQuery carregado)
     $(function () {
-      // ESPECIALIDADE: espera que sua API retorne {results:[{id: <cod_especialidade>, text: <nome>}]}
-      const $esp = $('#id_especialidade')
-      if ($esp.length) {
+      
+      // Inicializa o filtro de ESPECIALIDADE
+      const $esp = $('#id_especialidade');
+      if ($esp.length) { // Verifica se o elemento existe na página
         makeAjaxSelect2($esp, {
-          url: "{% url 'fila_cirurgica:especialidade_api_autocomplete' %}",
+          url: "{% url 'fila_cirurgica:especialidade_api_autocomplete' %}", // URL da API via Django
           placeholder: 'Filtrar por especialidade…',
+          // Define os parâmetros da query: termo de busca, página e limite
           getParams: (p) => ({ term: p.term, page: p.page || 1, limit: 15 }),
-          mapFn: (data, params) => mapResults(data, 'id', 'text')
-        })
-        // Opcional: tente pré-preencher usando o mesmo endpoint aceitando ?ids=
-        // prefillSelect2($esp, "{% url 'fila_cirurgica:especialidade_api_autocomplete' %}");
+          // Mapeia a resposta {id: ..., text: ...}
+          mapFn: (data, params) => mapResults(data, 'id', 'text') 
+        });
+        // Se a página recarregar com filtros aplicados, tenta preencher o texto
+        // prefillSelect2($esp, "{% url 'fila_cirurgica:especialidade_api_autocomplete' %}"); // Descomente se necessário
       }
     
-      // PROCEDIMENTO
-      const $proc = $('#id_procedimento')
+      // Inicializa o filtro de PROCEDIMENTO
+      const $proc = $('#id_procedimento');
       if ($proc.length) {
         makeAjaxSelect2($proc, {
           url: "{% url 'fila_cirurgica:procedimento_api_autocomplete' %}",
           placeholder: 'Filtrar por procedimento…',
           getParams: (p) => ({ term: p.term, page: p.page || 1, limit: 15 }),
+           // Mapeia a resposta {id: ..., text: ...}
           mapFn: (data, params) => mapResults(data, 'id', 'text')
-        })
-        // prefillSelect2($proc, "{% url 'fila_cirurgica:procedimento_api_autocomplete' %}");
+        });
+        // prefillSelect2($proc, "{% url 'fila_cirurgica:procedimento_api_autocomplete' %}"); // Descomente se necessário
       }
     
-      // MÉDICO
-      const $med = $('#id_medico')
+      // Inicializa o filtro de MÉDICO
+      const $med = $('#id_medico');
       if ($med.length) {
         makeAjaxSelect2($med, {
           url: "{% url 'fila_cirurgica:medico_api_autocomplete' %}",
           placeholder: 'Filtrar por médico…',
           getParams: (p) => ({ term: p.term, page: p.page || 1, limit: 15 }),
+           // Mapeia a resposta {id: ..., text: ...}
           mapFn: (data, params) => mapResults(data, 'id', 'text')
-        })
-        // prefillSelect2($med, "{% url 'fila_cirurgica:medico_api_autocomplete' %}");
+        });
+        // prefillSelect2($med, "{% url 'fila_cirurgica:medico_api_autocomplete' %}"); // Descomente se necessário
       }
     
-      // Botão "Limpar" global já resetará; mas se quiser um micro botão por campo:
+      // Exemplo de como adicionar um botão "limpar" específico (não usado aqui)
       // $('.btn-clear-esp').on('click', () => { $esp.val(null).trigger('change') })
-    })
+    });
   </script>
 {% endblock %}

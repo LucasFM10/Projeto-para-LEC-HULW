@@ -219,7 +219,7 @@ class FilaUpdateView(StaffRequiredMixin, PermissionRequiredMixin, UpdateView):
     permission_required = "fila_cirurgica.change_listaesperacirurgica"
     model = ListaEsperaCirurgica
     form_class = FilaUpdateForm
-    template_name = "portal/fila_update.html"
+    template_name = "portal/fila_form.html"
     success_url = reverse_lazy("portal:fila_list")
 
     def get_form(self, *args, **kwargs):
