@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'fila_cirurgica',
     'externo',
     'portal',
+    'aih',
 
     'unfold',
     'unfold.contrib.forms',
@@ -173,58 +174,3 @@ def environment_callback(request):
     if DEBUG:
         return [_("Desenvolvimento"), "warning"]
     return [_("Produção"), "success"]
-
-UNFOLD = {
-    # --- Identidade do Site ---
-    "SITE_TITLE": "Gestor de Fila Cirúrgica",
-    "SITE_HEADER": "Gestor de Fila - HULW",
-    "SITE_URL": reverse_lazy("admin:index"),
-    "SITE_SYMBOL": "assignment_add",
-
-    # --- Funcionalidades e Aparência ---
-    "SHOW_HISTORY": True,  # Mostra o botão "Histórico" (requer simple_history)
-    "SHOW_VIEW_ON_SITE": False,  # Esconde o botão "Ver no site"
-    "ENVIRONMENT": environment_callback, # Mostra o ambiente atual (Dev/Prod)
-    "SHOW_LANGUAGES": True, # Mostra o seletor de idiomas
-    "SIDEBAR": {
-        "show_search": True,  # Habilita a busca na barra lateral
-        "navigation": [
-            {
-                "title": _("Autenticação e Autorização"),
-                "separator": True,  # Top border
-                "collapsible": True,  # Collapsible group of links
-                "items": [
-                    {
-                        "title": _("Grupos"),
-                        "icon": "people",
-                        "link": reverse_lazy("admin:auth_group_changelist"),
-                        "permission": lambda request: request.user.is_superuser,
-                    },
-                    {
-                        "title": _("Usuários"),
-                        "icon": "people",
-                        "link": reverse_lazy("admin:auth_user_changelist"),
-                        "permission": lambda request: request.user.is_superuser,
-                    },
-                ],
-            },
-            {
-                "title": _("Fila Cirúrgica"),
-                "separator": True,  # Top border
-                "items": [
-                    {
-                        "title": _("Dashboard"),
-                        "icon": "Dashboard",
-                        "link": reverse_lazy("admin:fila_cirurgica_indicadorespecialidade_changelist"),
-                    },
-                    {
-                        "title": _("Lista de Espera Cirúrgica"),
-                        "icon": "Hourglass",
-                        "link": reverse_lazy("admin:fila_cirurgica_listaesperacirurgica_changelist"),
-                    },
-                ],
-            },
-        ],
-    },
-
-}

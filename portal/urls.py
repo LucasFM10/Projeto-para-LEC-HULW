@@ -9,6 +9,8 @@ from .views import (
     FilaDetailView,
     FilaUpdateView,
     FilaHistoryView,
+    AihListView,
+    AihCreateView,
     PortalLoginView
 )
 
@@ -29,4 +31,6 @@ urlpatterns = [
     path("fila/<int:pk>/editar/", FilaUpdateView.as_view(), name="fila_update"),
     path("fila/<int:pk>/historico/", FilaHistoryView.as_view(), name="fila_history"),
     path("fila/<int:pk>/remover/", FilaDeactivateView.as_view(), name="fila_remove"),
+    path("aih/", AihListView.as_view(), name="aih_list"),
+    path("aih/nova/", AihCreateView.as_view(), name="aih_create"),
 ]

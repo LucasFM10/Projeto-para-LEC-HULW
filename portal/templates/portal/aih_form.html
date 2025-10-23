@@ -1,0 +1,164 @@
+{% extends 'portal/base_portal.html' %}
+{% load static %}
+
+{% block title %}Nova Solicitação de AIH · Portal{% endblock %}
+
+{% block content %}
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-semibold">Nova Solicitação de AIH</h1>
+    <a href="{% url 'portal:aih_list' %}" class="px-3 py-2 rounded border text-sm">Voltar</a>
+  </div>
+
+  <form id="aih-form" method="post" class="bg-white border rounded-lg shadow-sm p-6 space-y-6">
+    {% csrf_token %}
+
+    {# ======================================================== #}
+    {#       SEÇÃO: IDENTIFICAÇÃO DO ESTABELECIMENTO          #}
+    {# ======================================================== #}
+    <fieldset class="border-t border-gray-200 pt-5">
+      <legend class="text-base font-semibold text-gray-900 mb-4">Identificação do Estabelecimento</legend>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% include "portal/components/form_field.html" with field=form.nome_estabelecimento_solicitante %}
+        {% include "portal/components/form_field.html" with field=form.cnes_solicitante %}
+        {% include "portal/components/form_field.html" with field=form.nome_estabelecimento_executante %}
+        {% include "portal/components/form_field.html" with field=form.cnes_executante %}
+      </div>
+    </fieldset>
+
+    {# ======================================================== #}
+    {#          SEÇÃO: IDENTIFICAÇÃO DO PACIENTE              #}
+    {# ======================================================== #}
+    <fieldset class="border-t border-gray-200 pt-5">
+      <legend class="text-base font-semibold text-gray-900 mb-4">Identificação do Paciente</legend>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {# CAMPO OBRIGATÓRIO MOVIDO PARA CÁ #}
+        {% include "portal/components/form_field.html" with field=form.prontuario %}
+
+        {% include "portal/components/form_field.html" with field=form.nome_paciente grid_class='lg:col-span-2' %}
+        {% include "portal/components/form_field.html" with field=form.cartao_nacional_saude %}
+        {% include "portal/components/form_field.html" with field=form.data_nascimento %}
+        {% include "portal/components/form_field.html" with field=form.sexo %}
+        {% include "portal/components/form_field.html" with field=form.raca_cor %}
+        {% include "portal/components/form_field.html" with field=form.nome_mae grid_class='lg:col-span-2' %}
+        {% include "portal/components/form_field.html" with field=form.telefone_contato_1 %}
+        {% include "portal/components/form_field.html" with field=form.nome_responsavel grid_class='lg:col-span-2' %}
+        {% include "portal/components/form_field.html" with field=form.telefone_contato_2 %}
+        {% include "portal/components/form_field.html" with field=form.endereco_completo grid_class='lg:col-span-3' %}
+        {% include "portal/components/form_field.html" with field=form.municipio_residencia %}
+        {% include "portal/components/form_field.html" with field=form.codigo_ibge_municipio %}
+        {% include "portal/components/form_field.html" with field=form.uf %}
+        {% include "portal/components/form_field.html" with field=form.cep %}
+      </div>
+    </fieldset>
+
+    {# ======================================================== #}
+    {#         SEÇÃO: JUSTIFICATIVA DA INTERNAÇÃO             #}
+    {# ======================================================== #}
+    <fieldset class="border-t border-gray-200 pt-5">
+      <legend class="text-base font-semibold text-gray-900 mb-4">Justificativa da Internação</legend>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% include "portal/components/form_field.html" with field=form.principais_sinais_sintomas grid_class='md:col-span-2' %}
+        {% include "portal/components/form_field.html" with field=form.condicoes_justificam_internacao grid_class='md:col-span-2' %}
+        {% include "portal/components/form_field.html" with field=form.resultados_provas_diagnosticas grid_class='md:col-span-2' %}
+        {% include "portal/components/form_field.html" with field=form.diagnostico_inicial grid_class='md:col-span-2' %}
+        {% include "portal/components/form_field.html" with field=form.cid10_principal %}
+        {% include "portal/components/form_field.html" with field=form.cid10_secundario %}
+        {% include "portal/components/form_field.html" with field=form.cid10_causas_associadas %}
+      </div>
+    </fieldset>
+
+    {# ======================================================== #}
+    {#           SEÇÃO: PROCEDIMENTO SOLICITADO               #}
+    {# ======================================================== #}
+    <fieldset class="border-t border-gray-200 pt-5">
+      <legend class="text-base font-semibold text-gray-900 mb-4">Procedimento Solicitado</legend>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+         {# CAMPOS OBRIGATÓRIOS MOVIDOS PARA CÁ #}
+        {% include "portal/components/form_field.html" with field=form.especialidade_api %}
+        {% include "portal/components/form_field.html" with field=form.procedimento_api %}
+
+        {% include "portal/components/form_field.html" with field=form.descricao_procedimento_solicitado grid_class='md:col-span-2' %}
+        {% include "portal/components/form_field.html" with field=form.codigo_procedimento %}
+        {% include "portal/components/form_field.html" with field=form.clinica %}
+        {% include "portal/components/form_field.html" with field=form.carater_internacao %}
+      </div>
+    </fieldset>
+
+    {# ======================================================== #}
+    {#          SEÇÃO: PROFISSIONAL SOLICITANTE               #}
+    {# ======================================================== #}
+    <fieldset class="border-t border-gray-200 pt-5">
+      <legend class="text-base font-semibold text-gray-900 mb-4">Profissional Solicitante</legend>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {# CAMPO OBRIGATÓRIO MOVIDO PARA CÁ #}
+        {% include "portal/components/form_field.html" with field=form.medico_api %}
+
+        {% include "portal/components/form_field.html" with field=form.tipo_documento_profissional %}
+        {% include "portal/components/form_field.html" with field=form.numero_documento_profissional %}
+        {% include "portal/components/form_field.html" with field=form.data_solicitacao %}
+      </div>
+    </fieldset>
+
+    {# ======================================================== #}
+    {#               SEÇÃO: CAUSAS EXTERNAS                   #}
+    {# ======================================================== #}
+    <fieldset class="border-t border-gray-200 pt-5">
+      <legend class="text-base font-semibold text-gray-900 mb-4">Causas Externas (Acidentes/Violências)</legend>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% include "portal/components/form_field.html" with field=form.acidente_transito %}
+        {% include "portal/components/form_field.html" with field=form.acidente_trabalho_tipico %}
+        {% include "portal/components/form_field.html" with field=form.acidente_trabalho_trajeto %}
+        {% include "portal/components/form_field.html" with field=form.cnpj_seguradora %}
+        {% include "portal/components/form_field.html" with field=form.numero_bilhete %}
+        {% include "portal/components/form_field.html" with field=form.serie_bilhete %}
+        {% include "portal/components/form_field.html" with field=form.cnpj_empresa %}
+        {% include "portal/components/form_field.html" with field=form.cnae_empresa %}
+        {% include "portal/components/form_field.html" with field=form.cbor %}
+        {% include "portal/components/form_field.html" with field=form.vinculo_previdencia %}
+      </div>
+    </fieldset>
+
+    {# ======================================================== #}
+    {#           SESSÃO DE PRIORIDADE (Largura Total)          #}
+    {# ======================================================== #}
+
+    {% if field.name == 'prioridade' %}
+      <div id="field-wrapper-{{ field.id_for_label }}" class="md:col-span-2">
+        <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
+        {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
+      </div>
+
+      <div id="prioridade-fields-block-full" class="hidden md:col-span-2 border border-yellow-400 bg-yellow-50 rounded-md p-4 mt-2">
+        <h3 class="text-lg font-semibold text-yellow-800 mb-4">Justificativa da Prioridade</h3>
+        <div class="grid grid-cols-1 gap-4" id="prioridade-grid">
+            </div>
+      </div>
+
+    {# O campo de justificativa renderiza escondido (para ser movido) #}
+    {% elif field.name == 'prioridade_justificativa' %}
+      <div id="field-wrapper-{{ field.id_for_label }}" class="prioridade-field-temp-wrapper hidden">
+        <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="text-gray-500 text-sm">{{ field.help_text }}</p>{% endif %}
+        {% for error in field.errors %}<p class="text-red-600 text-sm">{{ error }}</p>{% endfor %}
+      </div>
+    {% endif %}
+
+    {# ======================================================== #}
+    {#                       BOTÕES FINAIS                    #}
+    {# ======================================================== #}
+    <div class="flex items-center justify-end gap-2 border-t border-gray-200 pt-5">
+      <a href="{% url 'portal:aih_list' %}" class="px-3 py-2 rounded border text-sm">Cancelar</a>
+      <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">
+        Criar Solicitação AIH
+      </button>
+    </div>
+  </form>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/fila_form_logic.js' %}"></script>
+{% endblock %}
+

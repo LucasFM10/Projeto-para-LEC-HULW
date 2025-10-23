@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 
-import requests
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin
 from django.db.models import Count, Min
@@ -22,6 +20,12 @@ from fila_cirurgica.models import ListaEsperaCirurgica
 from .filters import FilaFilter
 from .forms import FilaCreateForm, FilaUpdateForm, FilaDeactivateForm
 from django.shortcuts import render
+
+from django.views.generic import ListView, CreateView
+from django.shortcuts import redirect
+
+from aih.models import AihSolicitacao
+from .forms import AihCreateForm
 
 
 def error_404(request, exception, template_name="errors/404.html"):
@@ -365,3 +369,34 @@ class FilaDeactivateView(StaffRequiredMixin, PermissionRequiredMixin, FormView):
 
         messages.success(self.request, f"{obj} removido da fila com sucesso.")
         return redirect(self.get_success_url())
+
+class AihListView(StaffRequiredMixin, PermissionRequiredMixin, ListView):
+    """Lista as AIHs existentes com paginação."""
+    permission_required = "aih.view_aihsolicitacao"
+    model = AihSolicitacao
+    template_name = "portal/aih_list.html"
+    context_object_name = "aih_list"
+    paginate_by = 20 # Ou outro número
+
+    def get_queryset(self):
+        return AihSolicitacao.objects.order_by('-data_criacao')
+    
+
+class AihCreateView(StaffRequiredMixin, PermissionRequiredMixin, CreateView):
+    """Formulário para criar uma nova AIH."""
+    permission_required = "aih.add_aihsolicitacao" # Ajuste a permissão se necessário
+    model = AihSolicitacao
+    form_class = AihCreateForm # Usa o novo formulário
+    template_name = "portal/aih_form.html" # Usará um novo template
+    success_url = reverse_lazy("portal:aih_list")
+
+    def form_valid(self, form):
+        # O método save() do AihCreateForm já lida com a lógica dos _api fields
+        self.object = form.save()
+        messages.success(self.request, "AIH criada com sucesso.")
+        return redirect(self.get_success_url())
+
+    def form_invalid(self, form):
+        print(form.errors)
+        messages.error(self.request, "Erro ao criar a AIH. Verifique os campos.")
+        return super().form_invalid(form)

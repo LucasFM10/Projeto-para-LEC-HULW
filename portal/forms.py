@@ -9,6 +9,7 @@ from fila_cirurgica.api_helpers import (
     get_or_create_profissional,
 )
 from fila_cirurgica.models import ListaEsperaCirurgica
+from aih.models import AihSolicitacao
 
 
 class FilaUpdateForm(forms.ModelForm):
@@ -82,7 +83,10 @@ class FilaUpdateForm(forms.ModelForm):
             "motivo_alteracao",
         ]
         widgets = {
-            "medida_judicial": forms.CheckboxInput(attrs={"class": "h-4 w-4 text-indigo-600 border-gray-300 rounded", "id": "id_medida_judicial"}),
+            "medida_judicial": forms.CheckboxInput(
+                attrs={'class': 'absolute w-4 h-4 opacity-0 peer', 
+                'id': 'id_medida_judicial'}
+            ),
             "observacoes": forms.Textarea(
                 attrs={"rows": 4, "placeholder": "Observações…"}
             ),
@@ -268,7 +272,8 @@ class FilaCreateForm(forms.ModelForm):
         ]
         widgets = {
             "medida_judicial": forms.CheckboxInput(
-                attrs={"class": "h-4 w-4 text-indigo-600 border-gray-300 rounded", "id": "id_medida_judicial"}
+                attrs={'class': 'absolute w-4 h-4 opacity-0 peer', 
+                'id': 'id_medida_judicial'}
             ),
             "observacoes": forms.Textarea(
                 attrs={"rows": 4, "placeholder": "Observações…"}
@@ -418,3 +423,192 @@ class FilaDeactivateForm(forms.Form):
         except Exception:
             # Em caso de falha, o campo 'motivo' ficará sem opções
             pass
+
+
+   
+# ==============================================================================
+# FORMULÁRIO DE CRIAÇÃO AIH (AihCreateForm) - REFATORADO
+# ==============================================================================
+class AihCreateForm(forms.ModelForm):
+    """
+    Formulário simplificado para criação de AIH via Portal.
+    Usa a mesma definição dos campos _api do FilaCreateForm para consistência.
+    Apenas estes 4 campos _api são estritamente obrigatórios para submissão inicial.
+    """
+
+    # --- Campos de Busca AJAX (Definição idêntica ao FilaCreateForm) ---
+    especialidade_api = forms.ChoiceField(
+        label="Especialidade",
+        required=True, # Obrigatório no formulário
+        choices=[("", "Digite para buscar…")],
+        widget=forms.Select(attrs={
+            "id": "id_especialidade_api", # Mesmo ID para consistência com JS
+            "data-autocomplete-url": reverse_lazy("fila_cirurgica:especialidade_api_autocomplete"),
+            "class": "peer tomselect-validate" # Classe para JS/CSS (mesmo se usar Select2)
+        }),
+    )
+    procedimento_api = forms.ChoiceField(
+        label="Procedimento",
+        required=True, # Obrigatório no formulário
+        choices=[("", "Digite para buscar…")],
+        widget=forms.Select(attrs={
+            "id": "id_procedimento_api", # Mesmo ID
+            "data-autocomplete-url": reverse_lazy("fila_cirurgica:procedimento_api_autocomplete"),
+            "class": "peer tomselect-validate" # Mesma classe
+        }),
+    )
+    medico_api = forms.ChoiceField(
+        label="Médico Solicitante",
+        required=True, # Obrigatório no formulário
+        choices=[("", "Digite para buscar…")],
+        widget=forms.Select(attrs={
+            "id": "id_medico_api", # Mesmo ID
+            "data-autocomplete-url": reverse_lazy("fila_cirurgica:medico_api_autocomplete"),
+            "class": "peer tomselect-validate" # Mesma classe
+        }),
+    )
+    prontuario = forms.ChoiceField( # Identificador do paciente
+        label="Paciente (Prontuário)",
+        required=True, # Obrigatório no formulário
+        choices=[("", "Digite para buscar…")],
+        widget=forms.Select(attrs={
+            "id": "id_prontuario", # Mesmo ID
+            "data-autocomplete-url": reverse_lazy("fila_cirurgica:paciente_api_autocomplete"),
+            "class": "peer tomselect-validate" # Mesma classe
+        }),
+    )
+
+    class Meta:
+        model = AihSolicitacao
+        # Exclui apenas os FKs reais que serão preenchidos pelo save()
+        # Todos os outros campos do modelo AihSolicitacao (com blank=True) serão incluídos
+        # e, como têm blank=True no modelo, o ModelForm os tornará required=False.
+        exclude = [
+            'especialidade',
+            'procedimento',
+            'medico',
+            'paciente',
+        ]
+        # Adiciona widgets e classes 'peer' para consistência visual/validação
+        # O ModelForm já respeita o blank=True do modelo, então não precisamos
+        # forçar required=False aqui, mas adicionamos 'peer' para CSS.
+        widgets = {
+             "data_nascimento": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date", "class": "peer"}),
+             "data_solicitacao": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date", "class": "peer"}),
+             "principais_sinais_sintomas": forms.Textarea(attrs={"rows": 3, "class": "peer"}),
+             "condicoes_justificam_internacao": forms.Textarea(attrs={"rows": 3, "class": "peer"}),
+             "resultados_provas_diagnosticas": forms.Textarea(attrs={"rows": 3, "class": "peer"}),
+             "diagnostico_inicial": forms.Textarea(attrs={"rows": 3, "class": "peer"}),
+             "nome_estabelecimento_solicitante": forms.TextInput(attrs={'class': 'peer'}),
+             "cnes_solicitante": forms.TextInput(attrs={'class': 'peer'}),
+             "nome_estabelecimento_executante": forms.TextInput(attrs={'class': 'peer'}),
+             "nome_paciente": forms.TextInput(attrs={'class': 'peer'}),
+             "numero_prontuario": forms.TextInput(attrs={'class': 'peer'}),
+             "cartao_nacional_saude": forms.TextInput(attrs={'class': 'peer'}),
+             "sexo": forms.Select(attrs={'class': 'peer'}),
+             "raca_cor": forms.Select(attrs={'class': 'peer'}),
+             "nome_mae": forms.TextInput(attrs={'class': 'peer'}),
+             "telefone_contato_1": forms.TextInput(attrs={'class': 'peer'}),
+             "nome_responsavel": forms.TextInput(attrs={'class': 'peer'}),
+             "telefone_contato_2": forms.TextInput(attrs={'class': 'peer'}),
+             "endereco_completo": forms.TextInput(attrs={'class': 'peer'}),
+             "municipio_residencia": forms.TextInput(attrs={'class': 'peer'}),
+             "codigo_ibge_municipio": forms.TextInput(attrs={'class': 'peer'}),
+             "uf": forms.TextInput(attrs={'class': 'peer'}),
+             "cep": forms.TextInput(attrs={'class': 'peer'}),
+             "cid10_principal": forms.TextInput(attrs={'class': 'peer'}),
+             "cid10_secundario": forms.TextInput(attrs={'class': 'peer'}),
+             "cid10_causas_associadas": forms.TextInput(attrs={'class': 'peer'}),
+             "descricao_procedimento_solicitado": forms.TextInput(attrs={'class': 'peer'}),
+             "codigo_procedimento": forms.TextInput(attrs={'class': 'peer'}),
+             "clinica": forms.TextInput(attrs={'class': 'peer'}),
+             "carater_internacao": forms.Select(attrs={'class': 'peer'}),
+             "tipo_documento_profissional": forms.Select(attrs={'class': 'peer'}),
+             "numero_documento_profissional": forms.TextInput(attrs={'class': 'peer'}),
+             "acidente_transito": forms.CheckboxInput(attrs={'class': 'peer'}), # Checkboxes não precisam das classes de esconder
+             "acidente_trabalho_tipico": forms.CheckboxInput(attrs={'class': 'peer'}),
+             "acidente_trabalho_trajeto": forms.CheckboxInput(attrs={'class': 'peer'}),
+             "cnpj_seguradora": forms.TextInput(attrs={'class': 'peer'}),
+             "numero_bilhete": forms.TextInput(attrs={'class': 'peer'}),
+             "serie_bilhete": forms.TextInput(attrs={'class': 'peer'}),
+             "cnpj_empresa": forms.TextInput(attrs={'class': 'peer'}),
+             "cnae_empresa": forms.TextInput(attrs={'class': 'peer'}),
+             "cbor": forms.TextInput(attrs={'class': 'peer'}),
+             "vinculo_previdencia": forms.Select(attrs={'class': 'peer'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Garante que as opções enviadas via AJAX sejam válidas (necessário para Select2/TomSelect)
+        def ensure_choice(field_name: str) -> None:
+            field = self.fields.get(field_name); value = self.data.get(field_name) or self.initial.get(field_name)
+            if not field or not value: return
+            label = self.data.get(f"{field_name}_text") or str(value) # Usado se o JS enviar o texto junto
+            if not any(str(value) == str(v) for v, _ in field.choices): field.choices = list(field.choices) + [(str(value), label)]
+
+        for name in ("especialidade_api", "procedimento_api", "medico_api", "prontuario"): ensure_choice(name)
+
+        # Garante que campos required=True no form tenham o atributo HTML 'required'
+        # Adiciona 'peer' a todos os campos para consistência CSS (exceto uploads)
+        for field_name, field in self.fields.items():
+             if field.required:
+                 field.widget.attrs['required'] = True
+             current_class = field.widget.attrs.get("class", "")
+             if "peer" not in current_class and not isinstance(field.widget, forms.FileInput):
+                  field.widget.attrs['class'] = (current_class + " peer").strip()
+
+        # Define ordem visual (campos obrigatórios primeiro)
+        desired_order = ["especialidade_api", "procedimento_api", "medico_api", "prontuario", "cid10_principal", "diagnostico_inicial"]
+        all_fields = list(self.fields.keys()); ordered_fields = desired_order + [f for f in all_fields if f not in desired_order]
+        self.order_fields(ordered_fields)
+
+    def save(self, commit: bool = True) -> AihSolicitacao:
+        """
+        Converte IDs externos (_api) em FKs reais, preenche nomes automaticamente
+        e salva a AIH.
+        """
+        instance: AihSolicitacao = super().save(commit=False)
+
+        # Coleta IDs dos campos AJAX
+        prontuario_str = self.cleaned_data["prontuario"].strip()
+        esp_id = str(self.cleaned_data["especialidade_api"])
+        proc_id = str(self.cleaned_data["procedimento_api"])
+        med_id = str(self.cleaned_data["medico_api"])
+
+        # Usa os helpers para buscar/criar os objetos relacionados
+        # Assumindo que os helpers retornam o objeto ou None se não encontrado/criado
+        paciente_obj = get_or_create_paciente(prontuario=prontuario_str)
+        especialidade_obj = get_or_create_especialidade(esp_id)
+        procedimento_obj = get_or_create_procedimento(proc_id)
+        medico_obj = get_or_create_profissional(med_id)
+
+        # --- PREENCHIMENTO DOS CAMPOS ---
+
+        # 1. Preenche os NOVOS campos ForeignKey
+        instance.paciente = paciente_obj
+        instance.especialidade = especialidade_obj
+        instance.procedimento = procedimento_obj
+        instance.medico = medico_obj # Associa ao campo 'medico' no modelo
+
+        # 2. Preenche os campos de NOME automaticamente (se ainda não preenchidos)
+        #    Use getattr para evitar erros se o objeto ou atributo não existir.
+        if not instance.nome_paciente and paciente_obj:
+             instance.nome_paciente = getattr(paciente_obj, 'nome', None) # Assumindo que PacienteAghu tem 'nome'
+        if not instance.cartao_nacional_saude and paciente_obj: # Bônus: CNS também
+            instance.cartao_nacional_saude = getattr(paciente_obj, 'cartao_sus', None) # Assumindo 'cartao_sus'
+        if not instance.descricao_procedimento_solicitado and procedimento_obj:
+             instance.descricao_procedimento_solicitado = getattr(procedimento_obj, 'nome', None) # Assumindo que Procedimento tem 'nome'
+        if not instance.codigo_procedimento and procedimento_obj: # Bônus: Código também
+             instance.codigo_procedimento = getattr(procedimento_obj, 'codigo', None) # Assumindo 'codigo'
+        if not instance.nome_profissional_solicitante and medico_obj:
+             instance.nome_profissional_solicitante = getattr(medico_obj, 'nome', None) # Assumindo que Profissional tem 'nome'
+
+        # --- FIM DO PREENCHIMENTO ---
+
+        # Salva a instância no banco se commit=True
+        if commit:
+            instance.save()
+            # Se você usar ManyToManyFields, eles precisam ser salvos *depois* do instance.save() inicial
+            # self.save_m2m() # Descomente se AihSolicitacao tiver M2M
+        return instance
