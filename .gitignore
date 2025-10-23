@@ -1,4 +1,58 @@
-.venv/
-.vscode/
-temp/
+# --- Arquivos específicos do Python ---
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Ambiente Virtual ---
+.venv/
+env/
+venv/
+
+# --- Dependências Python ---
+# (requirements.txt deve estar no Git, mas as libs instaladas não)
+# Se usar Pipenv:
+# Pipfile.lock
+# Se usar Poetry:
+# poetry.lock
+
+# --- Banco de Dados ---
+db.sqlite3
+*.sql
+*.dump
+
+# --- Ficheiros Estáticos e de Mídia do Django ---
+staticfiles/
+media/
+# Especificamente para o seu projeto:
+anexos_judiciais/
+
+# --- Ficheiros de Tradução Compilados ---
+*.mo
+
+# --- Dependências Node.js ---
+node_modules/
+
+# --- Ficheiros de Build/Compilados do Front-end ---
+static/dist/
+# Opcional: Ignorar vendor se o `npm postinstall` sempre recria
+static/vendor/
+
+# --- Logs e Ficheiros Temporários do Node/npm ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Ficheiros específicos do Sistema Operacional ---
+.DS_Store
+Thumbs.db
+
+# --- Ficheiros específicos do Editor ---
+.vscode/
+.idea/
+*.sublime-*
+
+# --- Segredos e Configurações Sensíveis ---
+# NUNCA comitar ficheiros com senhas, chaves de API, etc.
+*.env
+.env.*
