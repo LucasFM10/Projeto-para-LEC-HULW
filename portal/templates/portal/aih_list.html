@@ -25,10 +25,9 @@
           <th class="px-4 py-2">Paciente</th>
           <th class="px-4 py-2">Prontuário</th>
           <th class="px-4 py-2">Especialidade</th>
-          <th class="px-4 py-2">Procedimento</th>
-          <th class="px-4 py-2">Médico Solicitante</th>
+          <th class="px-4 py-2">Status Fila</th>
           <th class="px-4 py-2">Data Solicitação</th>
-          <th class="px-4 py-2 text-center w-32">Ações</th>
+          <th class="px-4 py-2 text-center w-36">Ações</th>
         </tr>
       </thead>
       <tbody class="divide-y">
@@ -38,17 +37,35 @@
             <td class="px-4 py-2">{{ aih.nome_paciente|default:'-' }}</td>
             <td class="px-4 py-2">{{ aih.paciente.prontuario|default:'-' }}</td>
             <td class="px-4 py-2">{{ aih.especialidade|default:'-' }}</td>
-            <td class="px-4 py-2">{{ aih.procedimento|default:'-' }}</td>
-            <td class="px-4 py-2">{{ aih.nome_profissional_solicitante|default:'-' }}</td>
+
+            <td class="px-4 py-2">
+              {% if aih.cadastrado_na_fila %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                  Na Fila
+                </span>
+              {% else %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  <span class="material-symbols-outlined text-[16px]">error</span>
+                  Pendente
+                </span>
+              {% endif %}
+            </td>
+
             <td class="px-4 py-2">{{ aih.data_solicitacao|date:'d/m/Y'|default:'-' }}</td>
             <td class="px-4 py-2">
               <div class="flex items-center justify-center gap-2.5">
-                {# Adicionar links para Ver/Editar AIH aqui no futuro #}
-                <a href="#" class="p-1.5 rounded hover:bg-blue-50 text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300" title="Ver">
+                
+                {% if not aih.cadastrado_na_fila and perms.fila_cirurgica.add_listaesperacirurgica %}
+                  <a href="{% url 'portal:fila_create' %}?aih_id={{ aih.pk }}&prontuario={{ aih.paciente.prontuario }}&especialidade_api={{ aih.especialidade.pk }}&procedimento_api={{ aih.procedimento.pk }}&medico_api={{ aih.medico.pk }}" 
+                     class="p-1.5 rounded hover:bg-green-50 text-green-700 focus:outline-none focus:ring-2 focus:ring-green-300" 
+                     title="Enviar para Fila Cirúrgica">
+                    <span class="material-symbols-outlined text-[20px]">arrow_circle_right</span>
+                  </a>
+                {% endif %}
+
+                <a href="{% url 'portal:aih_detail' aih.pk %}" class="p-1.5 rounded hover:bg-blue-50 text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300" title="Ver AIH">
                   <span class="material-symbols-outlined text-[20px]">visibility</span>
-                </a>
-                <a href="#" class="p-1.5 rounded hover:bg-amber-50 text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-300" title="Editar">
-                  <span class="material-symbols-outlined text-[20px]">edit</span>
                 </a>
               </div>
             </td>

@@ -16,7 +16,7 @@ from django.views.generic import CreateView, DetailView, TemplateView, UpdateVie
 from django_filters.views import FilterView
 from simple_history.utils import update_change_reason
 
-from fila_cirurgica.models import ListaEsperaCirurgica
+from fila_cirurgica.models import EspecialidadeAghu, ListaEsperaCirurgica, PacienteAghu, ProcedimentoAghu, ProfissionalAghu
 from .filters import FilaFilter
 from .forms import FilaCreateForm, FilaUpdateForm, FilaDeactivateForm
 from django.shortcuts import render
@@ -207,13 +207,81 @@ class FilaCreateView(StaffRequiredMixin, PermissionRequiredMixin, CreateView):
     form_class = FilaCreateForm
     template_name = "portal/fila_form.html"
     success_url = reverse_lazy("portal:fila_list")
+    
+    def get_initial(self):
+        """
+        Lê os parâmetros da URL (GET) para pré-preencher o formulário.
+        """
+        initial = super().get_initial()
+        
+        # Pega os IDs/Prontuário da URL
+        aih_id = self.request.GET.get('aih_id')
+        prontuario = self.request.GET.get('prontuario')
+        especialidade_id = self.request.GET.get('especialidade_api')
+        procedimento_id = self.request.GET.get('procedimento_api')
+        medico_id = self.request.GET.get('medico_api')
+
+        # Passa os valores para o 'initial' do formulário
+        if aih_id:
+            initial['aih_id'] = str(aih_id)
+        
+        # Para os campos Select2, precisamos não apenas do ID (valor),
+        # mas também do TEXTO (label) para exibição.
+        # Buscamos os objetos para extrair seus nomes.
+        
+        if prontuario:
+            try:
+                paciente = PacienteAghu.objects.get(prontuario=prontuario)
+                initial['prontuario'] = paciente.prontuario
+                initial['prontuario_text'] = paciente.nome
+            except PacienteAghu.DoesNotExist:
+                pass
+        
+        if especialidade_id:
+            try:
+                esp = EspecialidadeAghu.objects.get(pk=especialidade_id)
+                initial['especialidade_api'] = esp.cod_especialidade
+                initial['especialidade_api_text'] = esp.nome_especialidade
+            except EspecialidadeAghu.DoesNotExist:
+                pass
+
+        if procedimento_id:
+            try:
+                proc = ProcedimentoAghu.objects.get(pk=procedimento_id)
+                initial['procedimento_api'] = proc.codigo
+                initial['procedimento_api_text'] = proc.nome #
+            except ProcedimentoAghu.DoesNotExist:
+                pass
+
+        if medico_id:
+            try:
+                med = ProfissionalAghu.objects.get(pk=medico_id)
+                initial['medico_api'] = med.matricula
+                initial['medico_api_text'] = med.nome #
+            except ProfissionalAghu.DoesNotExist:
+                pass
+        return initial
 
     def form_valid(self, form):
+        # Pega o aih_id do formulário validado (cleaned_data)
+        aih_id = form.cleaned_data.get('aih_id')
+
+        # Salva o objeto da Fila no banco
         obj = form.save(commit=True)
+        
         try:
-            update_change_reason(obj, "Criado via Portal")
+            # Lógica para definir a mensagem do histórico
+            if aih_id:
+                reason = f"Criado via Portal a partir da AIH ID: {aih_id}"
+            else:
+                reason = "Criado via Portal"
+            
+            # Chama a função de histórico com a mensagem correta
+            update_change_reason(obj, reason)
         except Exception:
-            pass
+            # Não impede a criação se o log de histórico falhar
+            pass 
+        
         messages.success(self.request, "Entrada criada com sucesso.")
         return redirect(self.success_url)
 
@@ -400,3 +468,22 @@ class AihCreateView(StaffRequiredMixin, PermissionRequiredMixin, CreateView):
         print(form.errors)
         messages.error(self.request, "Erro ao criar a AIH. Verifique os campos.")
         return super().form_invalid(form)
+    
+class AihDetailView(StaffRequiredMixin, PermissionRequiredMixin, DetailView):
+    """
+    Exibe os detalhes de uma única solicitação de AIH,
+    seguindo o padrão da FilaDetailView.
+    """
+    
+    # 1. Permissão necessária (deve ser do app 'aih')
+    permission_required = "aih.view_aihsolicitacao"
+    
+    # 2. Modelo que esta view consulta
+    model = AihSolicitacao
+    
+    # 3. Template para renderizar
+    template_name = "portal/aih_detail.html"
+    
+    # 4. Nome do objeto no contexto
+    #    IMPORTANTE: O template deve usar {{ obj.campo }}
+    context_object_name = "obj"

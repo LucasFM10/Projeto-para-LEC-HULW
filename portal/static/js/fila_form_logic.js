@@ -281,17 +281,36 @@ $(function () {
     // ----------------------------------------
 
     // Remove o feedback de erro
+    // Remove o feedback de erro (usa .siblings())
     function clearErrorFor($el) {
         if ($el.hasClass('select2-hidden-accessible')) {
-            const $c = $el.next('.select2-container'); $c.removeClass('error'); $c.next('.field-error').remove();
-        } else { $el.removeClass('error-ring'); $el.next('.field-error').remove(); }
+            const $c = $el.next('.select2-container'); 
+            $c.removeClass('error');
+            // MODIFICADO: usa .siblings() para encontrar o erro
+            $c.siblings('.field-error').remove(); 
+        } else { 
+            $el.removeClass('error-ring');
+            // MODIFICADO: usa .siblings() para encontrar o erro
+            $el.siblings('.field-error').remove(); 
+        }
     }
 
-    // Adiciona o feedback de erro
+    // Adiciona o feedback de erro (usa .siblings())
     function showError($el, msg) {
         if ($el.hasClass('select2-hidden-accessible')) {
-            const $c = $el.next('.select2-container'); $c.addClass('error'); if (!$c.next('.field-error').length) { $('<p class="field-error">' + msg + '</p>').insertAfter($c); }
-        } else { $el.addClass('error-ring'); if (!$el.next('.field-error').length) { $('<p class="field-error">' + msg + '</p>').insertAfter($el); } }
+            const $c = $el.next('.select2-container'); 
+            $c.addClass('error'); 
+            // MODIFICADO: usa .siblings() para verificar se o erro já existe
+            if (!$c.siblings('.field-error').length) { 
+                $('<p class="field-error">' + msg + '</p>').insertAfter($c); 
+            }
+        } else { 
+            $el.addClass('error-ring'); 
+            // MODIFICADO: usa .siblings() para verificar se o erro já existe
+            if (!$el.siblings('.field-error').length) { 
+                $('<p class="field-error">' + msg + '</p>').insertAfter($el); 
+            } 
+        }
     }
 
     // Encontra todos os campos 'required' que estão visíveis e habilitados
@@ -322,6 +341,7 @@ $(function () {
 
     // Intercepta o 'submit' do formulário
     $('#lec-form').on('submit', function (e) {
+        console.log("Validação client-side iniciada...");
         let ok = true;
         getRequiredFields().each(function () {
             const $el = $(this);

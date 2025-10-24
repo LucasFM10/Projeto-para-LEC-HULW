@@ -178,7 +178,7 @@ class FilaCreateForm(forms.ModelForm):
     # O atributo 'data-autocomplete-url' é a "ponte" entre o Django e o
     # JavaScript. O Django renderiza a URL correta, e o JS a consome.
     # =================================================================
-    
+
     especialidade_api = forms.ChoiceField(
         label="Especialidade",
         required=True,
@@ -295,6 +295,57 @@ class FilaCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        
+        self.initial_data = kwargs.get('initial', {})
+        print(self.initial_data)
+        print(" <- initial_data no FilaCreateForm")
+
+        if self.initial_data.get('aih_id'):
+            FIELDS_TO_LOCK = [
+                'prontuario', 
+                'especialidade_api', 
+                'procedimento_api', 
+                'medico_api'
+            ]
+            
+            for name in FIELDS_TO_LOCK:
+                if name in self.fields:
+                    widget = self.fields[name].widget
+                    current_class = widget.attrs.get("class", "")
+                    
+                    # Adiciona classes CSS para parecer desabilitado.
+                    # Não usamos 'disabled=True' pois o valor não seria enviado no POST.
+                    # 'pointer-events-none' impede o clique.
+                    widget.attrs.update(
+                        {
+                            'class': (current_class + " bg-gray-50 cursor-not-allowed pointer-events-none").strip(),
+                            'title': "Campo bloqueado (originado da AIH)",
+                        }
+                    )
+
+        def prefill_choice(field_name: str) -> None:
+            """
+            Verifica se há dados iniciais para um campo Select2.
+            Se houver, adiciona o par (valor, texto) aos 'choices'
+            para que o Select2 possa renderizá-lo na carga inicial.
+            """
+            field = self.fields[field_name]
+            value = self.initial_data.get(field_name)
+            label = self.initial_data.get(f"{field_name}_text") or value # Usa o _text da View
+
+            if value and label:
+                # Adiciona o (valor, label) aos choices se ainda não existir
+                if not any(str(value) == str(v) for v, _ in field.choices):
+                    field.choices = list(field.choices) + [(str(value), label)]
+                
+                # Define o 'initial' no próprio campo
+                field.initial = value
+                
+        for name in (
+            "especialidade_api", "procedimento_api", 
+            "medico_api", "prontuario"
+        ):
+            prefill_choice(name)
 
         def ensure_choice(field_name: str) -> None:
             """
@@ -339,7 +390,8 @@ class FilaCreateForm(forms.ModelForm):
             "judicial_descricao", 
             "judicial_anexos",
             "situacao",
-            "observacoes", "data_novo_contato", 
+            "observacoes",
+            "data_novo_contato",
         ]
         # Filtra 'desired_order' para conter apenas campos que existem neste form
         self.order_fields([f for f in desired_order if f in self.fields])
@@ -353,6 +405,25 @@ class FilaCreateForm(forms.ModelForm):
         if prioridade != "SEM" and not prioridade_justificativa:
             self.add_error("prioridade_justificativa",
                            "Informe o motivo dessa prioridade.")
+
+        aih_id = self.initial_data['aih_id'] # Pega o aih_id do POST
+
+        # Se veio de uma AIH, os campos devem estar travados
+        if aih_id: 
+            FIELDS_TO_LOCK = ['prontuario', 'especialidade_api', 'procedimento_api', 'medico_api']
+            
+            for name in FIELDS_TO_LOCK:
+                # Compara o valor enviado (cleaned_data) com o valor original (initial)
+                # Usamos .get() e str() para comparar com segurança
+                enviado = str(cleaned.get(name) or '')
+                print(enviado + " <- enviado no FilaCreateForm")
+                inicial = str(self.initial.get(name) or '')
+                print(inicial + " <- inicial no FilaCreateForm")
+
+                if enviado != inicial:
+                    self.add_error(name, "Este campo não pode ser alterado pois foi originado de uma AIH.")
+                    # (Opcional) Força o valor de volta para o inicial
+                    cleaned[name] = self.initial.get(name)
         return cleaned
 
     def save(self, commit: bool = True) -> ListaEsperaCirurgica:
@@ -389,6 +460,17 @@ class FilaCreateForm(forms.ModelForm):
         # 4. Salva a instância no banco (se commit=True)
         if commit:
             instance.save()
+            
+        aih_id = self.initial_data["aih_id"]
+        print(aih_id + " <- AIH ID no save do FilaCreateForm")
+        if aih_id:
+            try:
+                aih = AihSolicitacao.objects.get(pk=aih_id)
+                aih.cadastrado_na_fila = True
+                aih.save(update_fields=['cadastrado_na_fila'])
+            except AihSolicitacao.DoesNotExist:
+                # Se a AIH original não for encontrada, não faz nada.
+                pass
             
         return instance
 
@@ -442,9 +524,8 @@ class AihCreateForm(forms.ModelForm):
         required=True, # Obrigatório no formulário
         choices=[("", "Digite para buscar…")],
         widget=forms.Select(attrs={
-            "id": "id_especialidade_api", # Mesmo ID para consistência com JS
+            "id": "id_especialidade_api",
             "data-autocomplete-url": reverse_lazy("fila_cirurgica:especialidade_api_autocomplete"),
-            "class": "peer tomselect-validate" # Classe para JS/CSS (mesmo se usar Select2)
         }),
     )
     procedimento_api = forms.ChoiceField(
@@ -454,7 +535,6 @@ class AihCreateForm(forms.ModelForm):
         widget=forms.Select(attrs={
             "id": "id_procedimento_api", # Mesmo ID
             "data-autocomplete-url": reverse_lazy("fila_cirurgica:procedimento_api_autocomplete"),
-            "class": "peer tomselect-validate" # Mesma classe
         }),
     )
     medico_api = forms.ChoiceField(
@@ -464,7 +544,6 @@ class AihCreateForm(forms.ModelForm):
         widget=forms.Select(attrs={
             "id": "id_medico_api", # Mesmo ID
             "data-autocomplete-url": reverse_lazy("fila_cirurgica:medico_api_autocomplete"),
-            "class": "peer tomselect-validate" # Mesma classe
         }),
     )
     prontuario = forms.ChoiceField( # Identificador do paciente
@@ -474,24 +553,17 @@ class AihCreateForm(forms.ModelForm):
         widget=forms.Select(attrs={
             "id": "id_prontuario", # Mesmo ID
             "data-autocomplete-url": reverse_lazy("fila_cirurgica:paciente_api_autocomplete"),
-            "class": "peer tomselect-validate" # Mesma classe
         }),
     )
 
     class Meta:
         model = AihSolicitacao
-        # Exclui apenas os FKs reais que serão preenchidos pelo save()
-        # Todos os outros campos do modelo AihSolicitacao (com blank=True) serão incluídos
-        # e, como têm blank=True no modelo, o ModelForm os tornará required=False.
         exclude = [
             'especialidade',
             'procedimento',
             'medico',
             'paciente',
         ]
-        # Adiciona widgets e classes 'peer' para consistência visual/validação
-        # O ModelForm já respeita o blank=True do modelo, então não precisamos
-        # forçar required=False aqui, mas adicionamos 'peer' para CSS.
         widgets = {
              "data_nascimento": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date", "class": "peer"}),
              "data_solicitacao": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date", "class": "peer"}),
@@ -539,6 +611,20 @@ class AihCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        if 'prioridade' in self.fields:
+            self.fields['prioridade'].widget.attrs['id'] = 'id_prioridade'
+            # Adiciona a classe 'peer' para consistência de estilo
+            current_class = self.fields['prioridade'].widget.attrs.get("class", "")
+            if "peer" not in current_class:
+                self.fields['prioridade'].widget.attrs['class'] = (current_class + " peer").strip()
+
+        if 'prioridade_justificativa' in self.fields:
+            self.fields['prioridade_justificativa'].widget.attrs['id'] = 'id_prioridade_justificativa'
+            # Adiciona a classe 'peer' para consistência de estilo
+            current_class = self.fields['prioridade_justificativa'].widget.attrs.get("class", "")
+            if "peer" not in current_class:
+                self.fields['prioridade_justificativa'].widget.attrs['class'] = (current_class + " peer").strip()
 
         # Garante que as opções enviadas via AJAX sejam válidas (necessário para Select2/TomSelect)
         def ensure_choice(field_name: str) -> None:
@@ -562,6 +648,18 @@ class AihCreateForm(forms.ModelForm):
         desired_order = ["especialidade_api", "procedimento_api", "medico_api", "prontuario", "cid10_principal", "diagnostico_inicial"]
         all_fields = list(self.fields.keys()); ordered_fields = desired_order + [f for f in all_fields if f not in desired_order]
         self.order_fields(ordered_fields)
+        
+    def clean(self) -> dict:
+        cleaned = super().clean()
+        
+        prioridade = (cleaned.get("prioridade") or "").strip()
+        prioridade_justificativa = (cleaned.get("prioridade_justificativa") or "").strip()
+        
+        # 'SEM' é o valor para "Sem Prioridade" no seu modelo AihSolicitacao
+        if prioridade and prioridade != "SEM" and not prioridade_justificativa:
+            self.add_error("prioridade_justificativa",
+                           "Informe o motivo dessa prioridade.")
+        return cleaned
 
     def save(self, commit: bool = True) -> AihSolicitacao:
         """

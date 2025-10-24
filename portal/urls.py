@@ -2,6 +2,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 
 from .views import (
+    AihDetailView,
     DashboardView,
     FilaDeactivateView,
     FilaListView,
@@ -33,4 +34,5 @@ urlpatterns = [
     path("fila/<int:pk>/remover/", FilaDeactivateView.as_view(), name="fila_remove"),
     path("aih/", AihListView.as_view(), name="aih_list"),
     path("aih/nova/", AihCreateView.as_view(), name="aih_create"),
+    path("aih/<int:pk>/", AihDetailView.as_view(), name="aih_detail"),
 ]

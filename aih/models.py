@@ -1,12 +1,21 @@
 from django.db import models
 
 from fila_cirurgica.models import EspecialidadeAghu, PacienteAghu, ProcedimentoAghu, ProfissionalAghu
+from simple_history.models import HistoricalRecords
 
 class AihSolicitacao(models.Model):
     """
     Representa o Laudo para Solicitação/Autorização de Internação Hospitalar (AIH).
     Todos os campos são opcionais (blank=True, null=True).
     """
+    history = HistoricalRecords()
+    
+    # Flag para controlar se esta AIH já foi enviada para a fila cirúrgica.
+    cadastrado_na_fila = models.BooleanField(
+        "Cadastrado na Fila?",
+        default=False,
+        help_text="Marca 'Verdadeiro' quando esta AIH é usada para criar uma entrada na fila."
+    )
 
     # --- Identificação do Estabelecimento de Saúde ---
     nome_estabelecimento_solicitante = models.CharField(
