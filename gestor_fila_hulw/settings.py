@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'externo',
     'portal',
     'aih',
+    'lec_legado',
 
     'unfold',
     'unfold.contrib.forms',

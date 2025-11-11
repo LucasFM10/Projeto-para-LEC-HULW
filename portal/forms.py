@@ -297,8 +297,6 @@ class FilaCreateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         self.initial_data = kwargs.get('initial', {})
-        print(self.initial_data)
-        print(" <- initial_data no FilaCreateForm")
 
         if self.initial_data.get('aih_id'):
             FIELDS_TO_LOCK = [
@@ -416,9 +414,7 @@ class FilaCreateForm(forms.ModelForm):
                 # Compara o valor enviado (cleaned_data) com o valor original (initial)
                 # Usamos .get() e str() para comparar com segurança
                 enviado = str(cleaned.get(name) or '')
-                print(enviado + " <- enviado no FilaCreateForm")
                 inicial = str(self.initial.get(name) or '')
-                print(inicial + " <- inicial no FilaCreateForm")
 
                 if enviado != inicial:
                     self.add_error(name, "Este campo não pode ser alterado pois foi originado de uma AIH.")
@@ -462,7 +458,6 @@ class FilaCreateForm(forms.ModelForm):
             instance.save()
             
         aih_id = self.initial_data["aih_id"]
-        print(aih_id + " <- AIH ID no save do FilaCreateForm")
         if aih_id:
             try:
                 aih = AihSolicitacao.objects.get(pk=aih_id)
