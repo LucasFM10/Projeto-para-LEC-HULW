@@ -4,11 +4,6 @@ Painel e ferramentas para gestão da lista de espera cirúrgica do HULW (LEC). E
 
 ---
 
-## Badges
-
-[![Build status](https://img.shields.io/badge/build-unknown-lightgrey.svg)](https://github.com/)
-[![License](https://img.shields.io/badge/license-See_LICENSE-blue.svg)](LICENSE)
-
 > Observação: substitua o badge de build pelo badge do CI que você usa (GitHub Actions, GitLab CI, etc.).
 
 ## O que o projeto faz
@@ -102,29 +97,6 @@ Consulte o código em `lec_legado/` para detalhes de configuração e opções d
 - `db.sqlite3` — banco de desenvolvimento (opcionalmente presente).
 - `Procfile` — exemplo de entrada para Heroku/Gunicorn.
 
-## Testes
-
-Executar a suíte de testes Django:
-
-```bash
-python manage.py test
-```
-
-Os testes estão distribuídos por app (ex.: `aih/tests.py`, `externo/tests.py`, `lec_legado/tests.py`).
-
-## Como contribuir (resumo)
-
-1. Abra uma issue para discutir alterações significativas.
-2. Crie um branch a partir de `main`/`master`.
-3. Adicione testes para novas funcionalidades/bugs.
-4. Faça PRs pequenos e atômicos; descreva a motivação e mudanças no título/descritivo.
-
-Para diretrizes formais, adicione um `CONTRIBUTING.md` no repositório e links aqui. Atualmente referencie `CONTRIBUTING.md`:
-
-- `docs/CONTRIBUTING.md` (se criado)
-- `CONTRIBUTING.md` (arquivo na raiz)
-
-## Onde obter ajuda
 
 - Abra uma issue neste repositório.
 - Consulte o código-fonte e templates nas pastas dos apps.
@@ -134,12 +106,4 @@ Para diretrizes formais, adicione um `CONTRIBUTING.md` no repositório e links a
 
 - Repositório mantido por: equipe do projeto (NIR / HULW). Para contato interno, procure o responsável técnico listado nos metadados do projeto.
 
-Se quiser adicionar contatos públicos ou e-mails, crie `MAINTAINERS.md` e referencie aqui.
 
-## Notas de segurança e privacidade
-
-- O projeto lida com dados clínicos sensíveis. Em produção, verifique conformidade com LGPD e políticas locais. Evite expor dados pessoais em endpoints públicos.
-
----
-
-Se quiser, posso também criar um `CONTRIBUTING.md` e um `MAINTAINERS.md` esboço curto para acompanhar este README.
